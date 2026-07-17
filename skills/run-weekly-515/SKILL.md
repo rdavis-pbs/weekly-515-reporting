@@ -1,8 +1,9 @@
 ---
 name: run-weekly-515
 description: >
-  Run the full weekly 515 workflow end to end: collect chat, email, calendar, OneNote, git, and
-  Jira activity for the current work week, then roll it all up into a proposed 515 entry. This is
+  Run the full weekly 515 workflow end to end: collect chat, email, calendar, OneNote, git, Jira,
+  and Claude (Code + chat + Cowork) activity for the current work week, then roll it all up into a
+  proposed 515 entry. This is
   the one-click Friday driver for the weekly-515-reporting plugin. Use whenever the user says "run
   my weekly 515", "do my 515", "prep my weekly report", "it's Friday, do my 515", or wants the
   whole weekly report workflow done at once.
@@ -10,8 +11,8 @@ description: >
 
 # Run weekly 515 (orchestrator)
 
-This is the single entry point the user triggers each Friday. It runs the five collector skills,
-then the roll-up, all against the same work week and output folder.
+This is the single entry point the user triggers each Friday. It runs the collector skills, then the
+roll-up, all against the same work week and output folder.
 
 ## Step 1 — Establish the week and output folder once
 
@@ -31,6 +32,7 @@ and move on:
 4. `onenote-summary`  (local/OneDrive notes export)
 5. `git-summary`  (GitHub — needs the connector authorized)
 6. `jira-summary`  (saved Jira filter, via browser)
+7. `claude-summary`  (Claude Code local sessions + claude.ai chat + Cowork, via browser)
 
 Each writes one file into the `<FRIDAY>` folder. Keep a running note of which succeeded and which
 were skipped (source empty, connector not authorized, or config like a filter/notes path not set).

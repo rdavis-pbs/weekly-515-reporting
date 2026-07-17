@@ -27,8 +27,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md` and run its snippet to get `FRI
 
 ## Step 2 — Get the Slack summary from Slackbot (browser)
 
-Use the Claude in Chrome tools to open Slack (`https://app.slack.com`, or the user's workspace URL
-if they've set one). Then get a weekly recap from Slackbot:
+Read `SLACK_URL` from `${CLAUDE_PLUGIN_ROOT}/shared/config.md`. Use the Claude in Chrome tools to
+open that URL (falling back to `https://app.slack.com` if the key isn't set). Then get a weekly
+recap from Slackbot:
 
 1. Open the **Slackbot** direct message (or the workspace's AI **recap**/**summarize** feature if
    available on the user's plan).

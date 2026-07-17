@@ -3,7 +3,7 @@ name: weekly-515-rollup
 description: >
   Build the proposed weekly 515 entry: read the user's last few 515 records from Airtable (through
   the browser), then distill this week's collected summaries (chat, email, calendar, OneNote, git,
-  Jira) into that same Airtable format, saving it as "proposed 515 accomplishments.md" in the weekly
+  Jira, Claude) into that same Airtable format, saving it as "proposed 515 accomplishments.md" in the weekly
   515 folder and notifying the user. Use whenever the user wants to draft/prepare their 515 entry,
   asks to "roll up my week", "draft my 515", "prepare my weekly Airtable update", or runs the weekly
   515 workflow. Part of the weekly-515-reporting plugin.
@@ -50,8 +50,8 @@ records — this step is read-only.
 
 Read every file present in the `<FRIDAY>` folder:
 `chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `onenote-summary.md`,
-`git-summary.md`, `jira-summary.md`. Some may be missing if a source had no activity or wasn't run
-— that's fine; work with what's there and note which sources were unavailable.
+`git-summary.md`, `jira-summary.md`, `claude-summary.md`. Some may be missing if a source had no
+activity or wasn't run — that's fine; work with what's there and note which sources were unavailable.
 
 ## Step 4 — Distill into the 515 format
 

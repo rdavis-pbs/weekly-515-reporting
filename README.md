@@ -24,6 +24,7 @@ on the folder.
 | `onenote-summary` | OneNote notes | SharePoint-hosted notebook via browser (Claude in Chrome) | `onenote-summary.md` |
 | `git-summary` | GitHub | GitHub connector | `git-summary.md` |
 | `jira-summary` | Jira | Saved filter via browser (Claude in Chrome) | `jira-summary.md` |
+| `claude-summary` | Claude Code + claude.ai chat + Cowork | Local session transcripts on disk; chat & Cowork via browser | `claude-summary.md` |
 | `weekly-515-rollup` | all of the above + Airtable | Airtable read via browser | `proposed 515 accomplishments.md` |
 | `run-weekly-515` | — | orchestrates all of the above | — |
 
@@ -42,5 +43,7 @@ Copy `shared/config.example.md` to `shared/config.md` (git-ignored) and fill in 
 
 - **Microsoft 365** (Outlook mail, calendar, Teams) — used directly.
 - **GitHub** — must be authorized for `git-summary`.
-- **Slack**, **Jira/Atlassian**, **Airtable** — accessed through the browser (Claude in Chrome),
-  so no connector auth is required for those.
+- **Slack**, **Jira/Atlassian**, **Airtable**, **claude.ai chat**, **Cowork** — accessed through the
+  browser (Claude in Chrome), so no connector auth is required for those.
+- **Claude Code** — read from local session transcripts under `~/.claude/projects/`; nothing to
+  authorize, but the sessions must live on the machine the plugin runs on.

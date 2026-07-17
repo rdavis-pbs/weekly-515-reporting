@@ -6,7 +6,7 @@ conversation isn't available.
 
 ## What this plugin does
 
-Assembles your weekly **515** report. Six collector skills each summarize one source of work
+Assembles your weekly **515** report. Seven collector skills each summarize one source of work
 activity for the week and drop a markdown file into a dated folder; a roll-up skill then distills
 all of them into a proposed 515 entry that matches the existing Airtable format. `run-weekly-515`
 runs the whole chain.
@@ -23,7 +23,7 @@ folder name.
 
 - **Anchor Friday**: if run Mon–Fri, it's this week's Friday; if run Sat/Sun, the Friday of the
   week that just ended. The output folder is always named for this anchor Friday.
-- **Most collectors use Mon–Fri** (chat, email, calendar, OneNote, git).
+- **Most collectors use Mon–Fri** (chat, email, calendar, OneNote, git, Claude).
 - **Jira is the exception — it uses a 7-day Friday→Friday window**, ending on the same anchor
   Friday the folder is named for (so folder and Jira window line up). This was a specific request:
   your Jira reporting period is Fri→Fri, and your saved filter has hardcoded dates that the
@@ -42,6 +42,11 @@ This was a deliberate design choice, not a limitation to "fix":
 - **Jira** — read through the browser via your saved filter. No Atlassian connector needed.
 - **Airtable** — read through the browser (roll-up reads the last few 515 records to learn the
   format). No Airtable connector needed.
+- **Claude** (`claude-summary`) — three surfaces, mixed access:
+  - **Claude Code** is read from **local session transcripts** on disk (`~/.claude/projects/*/*.jsonl`),
+    filtered to the Mon–Fri window by each turn's ISO `timestamp` and grouped by the session's `cwd`.
+    No connector or browser — but the sessions must live on the machine the plugin runs on.
+  - **claude.ai chat** and **Cowork** are read through the browser, like the other browser sources.
 
 Browser sources just need you signed in to those sites in Chrome with the Claude in Chrome
 extension connected.

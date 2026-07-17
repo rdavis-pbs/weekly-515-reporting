@@ -5,6 +5,9 @@ git-ignored, so your real URLs and paths stay off GitHub. Every skill that needs
 values reads it from `config.md` by key.
 
 ```
+# Slack workspace/channel URL (chat-summary opens this in the browser)
+SLACK_URL        = <your Slack URL, e.g. https://app.slack.com/client/TXXXXXXXX/CXXXXXXXX>
+
 # Jira saved/custom filter URL (jira-summary reads this)
 JIRA_FILTER_URL  = <your Jira saved-filter URL, e.g. https://yourorg.atlassian.net/issues/?filter=NNNNN>
 
