@@ -67,6 +67,25 @@ Synthesize across all sources into the user's actual Airtable field structure. G
 - **Flag assumptions.** Where you inferred an accomplishment or its impact rather than seeing it
   stated, mark it so the user can pressure-test it before pasting.
 
+### Level of detail and focus (write high, not deep)
+
+The draft consistently comes out too long and too low-level. Apply these rules to **every**
+section — the accomplishments *and* Next Week's Priorities, Challenges/Opportunities, and Other
+Goals:
+
+- **Keep each item high-level — 1–2 sentences.** State what the user drove and the outcome. Drop
+  the implementation mechanics: SQL queries, pipeline/architecture diagrams, field-by-field specs,
+  and blow-by-blow ticket back-and-forth belong in the source tickets, not the 515.
+- **Center the user's own actions.** Cut commentary about what other people did or how they
+  reacted ("Phil deployed…", "got X's sign-off with no edits", "Y asked for a review"). Keep others
+  only where they're a genuine dependency/blocker, and name them plainly without narrating.
+- **No ticket/issue numbers in the body** (Jira, CAB, TR, AIR, etc.). It's fine to say "created a
+  ticket to reconcile the counts" without the number. IDs may stay only in the meta
+  "Sources used / Assumptions" footer, not in the report itself.
+- **Match status to reality — don't describe in-progress work as done.** Use "created a ticket
+  to…", "kicked off…", "prepped… ahead of the CAB (7/28)" rather than implying completion. Watch
+  tense and dates: don't file a future-dated event (e.g. one two weeks out) under "Next Week".
+
 ## Step 5 — Write the draft
 
 Write to `<FRIDAY>/proposed 515 accomplishments.md`. Structure it to mirror the Airtable record so

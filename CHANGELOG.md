@@ -2,6 +2,20 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.5.0
+- `weekly-515-rollup`: added a "Level of detail and focus" rule set to Step 4 so proposals come out
+  high-level by default — 1–2 sentences per item, centered on the user's own actions, no ticket
+  numbers in the body, and status matched to reality (no in-progress work described as done).
+  Rules apply to every section, not just the accomplishments.
+- `chat-summary`: sharpened the Slackbot prompt — concrete week dates, focus on what the user drove
+  and decisions landed, grouped by topic/project.
+- `claude-summary`: made all three surfaces mandatory — Cowork is captured even when the skill runs
+  inside Cowork, and the Claude Code transcript scan must be attempted before being marked
+  unavailable.
+- `onenote-summary`: documented how the user actually structures notes — dates inside page bodies
+  (not titles), main journal at "BI Tech Group → Journal 2026," skip Archive/Credentials, `m/d/yy`
+  search format, and per-section search.
+
 ## 0.4.0
 - New `claude-summary` collector: summarizes Claude activity for the week — Claude Code sessions
   (read from local `~/.claude/projects` transcripts), claude.ai chat, and Cowork (both via browser).
