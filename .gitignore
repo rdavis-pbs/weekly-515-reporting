@@ -1,0 +1,12 @@
+# Local config with real, person/machine-specific values (copy config.example.md → config.md)
+shared/config.md
+
+# Packaged build artifacts (regenerate from source when cutting a release)
+*.plugin
+*.zip
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
