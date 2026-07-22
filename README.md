@@ -4,7 +4,7 @@ A plugin that assembles your weekly **515** report. It gathers a week's worth of
 from six sources, drops a summary file for each into a dated folder, then distills everything into a
 proposed 515 entry that matches the existing Airtable format.
 
-> **New here?** See [COLLEAGUE-SETUP.md](COLLEAGUE-SETUP.md) for step-by-step install and setup.
+> **New here?** See [docs/COLLEAGUE-SETUP.md](docs/COLLEAGUE-SETUP.md) for step-by-step install and setup.
 
 ## The week & folder convention
 
