@@ -1,8 +1,10 @@
 # Local config — template
 
-Copy this file to `config.md` in the same folder and fill in your own values. `config.md` is
-git-ignored, so your real URLs and paths stay off GitHub. Every skill that needs one of these
-values reads it from `config.md` by key.
+Copy this file to `~/.weekly-515-reporting/config.md` (a `.weekly-515-reporting` folder in your
+home directory) and fill in your own values. That location lives **outside** the plugin folder, so
+it is never committed to GitHub **and** it survives plugin auto-updates — the plugin's own folder
+is a cache that gets replaced on every update. Every skill that needs one of these values reads it
+from `~/.weekly-515-reporting/config.md` by key.
 
 ```
 # Slack workspace/channel URL (chat-summary opens this in the browser)

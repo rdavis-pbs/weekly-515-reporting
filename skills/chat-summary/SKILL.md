@@ -27,7 +27,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md` and run its snippet to get `FRI
 
 ## Step 2 — Get the Slack summary from Slackbot (browser)
 
-Read `SLACK_URL` from `${CLAUDE_PLUGIN_ROOT}/shared/config.md`. Use the Claude in Chrome tools to
+Read `SLACK_URL` from `~/.weekly-515-reporting/config.md` (the plugin's persistent config — see the
+**Config location** section of `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md` for the path and how to
+create it if missing). Use the Claude in Chrome tools to
 open that URL (falling back to `https://app.slack.com` if the key isn't set). Then get a weekly
 recap from Slackbot:
 

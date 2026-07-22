@@ -18,16 +18,17 @@ with minimal editing. This skill only drafts to a local file; it does **not** wr
 
 ## Configuration — Airtable
 
-Read `AIRTABLE_515_URL` from `${CLAUDE_PLUGIN_ROOT}/shared/config.md` (git-ignored local config).
-If `config.md` doesn't exist yet, copy `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to
-`config.md` first.
+Read `AIRTABLE_515_URL` from `~/.weekly-515-reporting/config.md` (persistent local config in your
+home directory — it survives plugin updates; see the **Config location** section of
+`${CLAUDE_PLUGIN_ROOT}/shared/work-week.md`). If that file doesn't exist yet, copy
+`${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to `~/.weekly-515-reporting/config.md` first.
 
 ```
-AIRTABLE_515_URL = <from shared/config.md, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
+AIRTABLE_515_URL = <from config.md, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
 ```
 
 If `AIRTABLE_515_URL` isn't set (still a placeholder), ask the user for it, save it into
-`config.md`, and then continue.
+`~/.weekly-515-reporting/config.md`, and then continue.
 
 ## Step 1 — Establish the week and output folder
 

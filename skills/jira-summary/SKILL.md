@@ -17,12 +17,14 @@ user's own saved filter, so the skill sees exactly the issues the user scoped.
 
 ## Configuration — Jira filter
 
-Read `JIRA_FILTER_URL` from `${CLAUDE_PLUGIN_ROOT}/shared/config.md` (git-ignored local config).
-If `config.md` doesn't exist yet, copy `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to
-`config.md`, ask the user for their Jira saved-filter URL, fill it in, and then continue.
+Read `JIRA_FILTER_URL` from `~/.weekly-515-reporting/config.md` (persistent local config in your
+home directory — it survives plugin updates; see the **Config location** section of
+`${CLAUDE_PLUGIN_ROOT}/shared/work-week.md`). If that file doesn't exist yet, copy
+`${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to `~/.weekly-515-reporting/config.md`, ask the
+user for their Jira saved-filter URL, fill it in, and then continue.
 
 ```
-JIRA_FILTER_URL = <from shared/config.md, e.g. https://yourorg.atlassian.net/issues/?filter=NNNNN>
+JIRA_FILTER_URL = <from config.md, e.g. https://yourorg.atlassian.net/issues/?filter=NNNNN>
 ```
 
 ## Step 1 — Establish the output folder

@@ -2,6 +2,13 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.6.0
+- Config moved out of the plugin folder to `~/.weekly-515-reporting/config.md` so it survives
+  plugin auto-updates (the installed plugin folder is a cache that gets replaced on each update).
+  All skills that read config (`chat-summary`, `jira-summary`, `onenote-summary`,
+  `weekly-515-rollup`) and `shared/work-week.md` now point at the persistent home-directory path;
+  README and `config.example.md` updated to match.
+
 ## 0.5.0
 - `weekly-515-rollup`: added a "Level of detail and focus" rule set to Step 4 so proposals come out
   high-level by default — 1–2 sentences per item, centered on the user's own actions, no ticket

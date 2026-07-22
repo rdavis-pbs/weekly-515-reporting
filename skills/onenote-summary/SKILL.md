@@ -17,12 +17,14 @@ the user's SharePoint/OneDrive and is read through the browser (it opens in OneN
 
 ## Configuration — OneNote notebook
 
-Read `ONENOTE_URL` from `${CLAUDE_PLUGIN_ROOT}/shared/config.md` (git-ignored local config).
-If `config.md` doesn't exist yet, copy `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to
-`config.md`, ask the user for their SharePoint/OneDrive OneNote URL, fill it in, then continue.
+Read `ONENOTE_URL` from `~/.weekly-515-reporting/config.md` (persistent local config in your home
+directory — it survives plugin updates; see the **Config location** section of
+`${CLAUDE_PLUGIN_ROOT}/shared/work-week.md`). If that file doesn't exist yet, copy
+`${CLAUDE_PLUGIN_ROOT}/shared/config.example.md` to `~/.weekly-515-reporting/config.md`, ask the
+user for their SharePoint/OneDrive OneNote URL, fill it in, then continue.
 
 ```
-ONENOTE_URL = <from shared/config.md — your OneNote Doc.aspx URL from SharePoint/OneDrive>
+ONENOTE_URL = <from config.md — your OneNote Doc.aspx URL from SharePoint/OneDrive>
 ```
 
 ## Step 1 — Establish the week and output folder
