@@ -22,22 +22,29 @@ It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get s
 
 With auto-sync on, you'll pick up new versions automatically as they're published.
 
-## Step 2 — Create your own config (required)
+## Step 2 — Connect a folder and create your config (required)
 
-The plugin reads your personal URLs and paths from **one file in your home directory**:
+The plugin reads your personal URLs from **one file inside a folder you connect to Cowork**:
 
 ```
-~/.weekly-515-reporting/config.md
+<your connected folder>/.weekly-515-reporting/config.md
 ```
 
-This file is **yours** — it is never committed to GitHub and never shared. It also lives outside
-the plugin folder on purpose, so it survives plugin updates. Create it once:
+Keeping it in a folder *you* connect — rather than in the plugin folder or the sandbox home —
+matters for three reasons: it's never committed to GitHub, it survives plugin updates (the installed
+plugin folder is a cache that gets replaced), **and** it survives Cowork sessions (each remote
+session gets a fresh, throwaway home directory — anything stored there is gone next time). A
+connected folder is the one place that persists.
 
-1. Make a folder named `.weekly-515-reporting` in your home directory
-   (Windows: `C:\Users\<you>\.weekly-515-reporting`).
-2. Copy the template `shared/config.example.md` from the installed plugin into it as `config.md`.
-   (Easiest: just run any skill — see Step 4 — and Claude will offer to create it and prompt you
-   for the values.)
+Set it up once:
+
+1. **Connect a folder** to Cowork — pick (or make) a folder to hold your 515 config and reports,
+   e.g. a `515 weekly reports` folder. This is a manual step in the Cowork UI; Claude can't connect
+   a folder for you.
+2. **Create the config.** Easiest: just run any skill (see Step 4) — first-run setup will ask which
+   connected folder to use, create `.weekly-515-reporting/config.md` there, and prompt you for the
+   values. Or copy the template `shared/config.example.md` into
+   `<your folder>/.weekly-515-reporting/config.md` yourself.
 3. Fill in **your own** values:
 
 ```
@@ -53,8 +60,9 @@ ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 # Your Airtable 515 base/view URL (weekly-515-rollup reads this)
 AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
-# The folder where your dated weekly report subfolders are written
-OUTPUT_ROOT      = C:\Users\<you>\Claude\Projects\515 weekly reports
+# OPTIONAL — reports default to the connected folder this config lives in.
+# Set OUTPUT_ROOT only if you want them written somewhere else.
+# OUTPUT_ROOT    = C:\Users\<you>\Claude\Projects\515 weekly reports
 ```
 
 **Where to find each value**
@@ -63,8 +71,8 @@ OUTPUT_ROOT      = C:\Users\<you>\Claude\Projects\515 weekly reports
 - `ONENOTE_URL` — open your OneNote notebook in the browser (SharePoint/OneDrive) and copy the
   `Doc.aspx?...` URL.
 - `AIRTABLE_515_URL` — open your team's 515 base/view in Airtable and copy the URL.
-- `OUTPUT_ROOT` — a folder you've connected as a project in Cowork; reports are written under it in
-  dated subfolders (`<OUTPUT_ROOT>\<FRIDAY>\`).
+- `OUTPUT_ROOT` — optional; leave it commented out and reports go into the connected folder your
+  config lives in (`<that folder>/<FRIDAY>/`). Set it only to write reports somewhere else.
 
 > Note: `onenote-summary` assumes a particular note structure (dates written inside page bodies,
 > a main journal section). If your notes are organized differently, tell Claude how yours are laid
@@ -100,14 +108,17 @@ within enterprise policy while still letting the workflow read the sources it ne
   `weekly-515-rollup`.
 
 **The week & output folder:** everything targets one **Mon–Fri** work week, anchored to a Friday.
-Run Mon–Fri → this week; run Sat/Sun → the week that just ended. Output goes to
-`<OUTPUT_ROOT>\<FRIDAY>\` (e.g. `...\2026-07-17\`), one file per source, plus
-`proposed 515 accomplishments.md` from the roll-up.
+Run Mon–Fri → this week; run Sat/Sun → the week that just ended. Output goes into your connected
+folder under a dated subfolder (`<your folder>/<FRIDAY>/`, e.g. `.../2026-07-17/`), one file per
+source, plus `proposed 515 accomplishments.md` from the roll-up.
 
 ## Notes & troubleshooting
 
 - **Your config is personal and local.** Each person maintains their own
-  `~/.weekly-515-reporting/config.md`; it does not sync and is not shared.
+  `<their connected folder>/.weekly-515-reporting/config.md`; it does not sync and is not shared.
+- **Where config must live in Cowork.** Store it in a folder you've **connected** to Cowork. The
+  sandbox's own home directory (`~`) is wiped after each remote session, so a config left there
+  won't be found next time — the connected folder is what persists.
 - **`claude-summary` reads local Claude Code transcripts** from `~/.claude/projects/` on the machine
   you run it on — so run it on the machine where you actually use Claude Code.
 - **A source can be skipped.** If a connector isn't authorized or a URL isn't set, that collector

@@ -34,15 +34,18 @@ Trigger `run-weekly-515` each Friday to do the whole thing, or run any single sk
 
 ## Before first use — set these
 
-Copy `shared/config.example.md` to `~/.weekly-515-reporting/config.md` (a `.weekly-515-reporting`
-folder in your home directory) and fill in your own values. This lives outside the plugin folder on
-purpose: it keeps your real URLs off GitHub **and** it survives plugin auto-updates (the installed
-plugin folder is a cache that gets replaced on each update, so config kept inside it would be lost).
+Copy `shared/config.example.md` to `.weekly-515-reporting/config.md` **inside a folder you own and
+connect to Cowork** (e.g. your "515 weekly reports" folder), and fill in your own values. Keeping it
+in a connected/workspace folder — not the plugin folder — means your real URLs stay off GitHub, the
+config survives plugin auto-updates (the installed plugin folder is a cache replaced on each update),
+**and** it survives Cowork sessions (the sandbox home directory is wiped each session). Easiest path:
+just run any skill and let first-run setup create it for you.
 
+- `SLACK_URL` — your Slack workspace/channel URL (used by `chat-summary`).
 - `JIRA_FILTER_URL` — your Jira saved-filter URL (used by `jira-summary`).
 - `ONENOTE_URL` — your SharePoint/OneDrive OneNote notebook URL (used by `onenote-summary`).
 - `AIRTABLE_515_URL` — your 515 base/view URL (used by `weekly-515-rollup`).
-- `OUTPUT_ROOT` — the folder where dated report subfolders are written.
+- `OUTPUT_ROOT` — *optional.* Reports default to the connected folder; set this only to write them elsewhere.
 
 ## Connectors used
 
