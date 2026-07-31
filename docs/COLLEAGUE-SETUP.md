@@ -8,9 +8,9 @@ It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get s
 
 - The **Claude desktop app** with Cowork.
 - A **Microsoft 365** account (Outlook mail/calendar, Teams) connected in Claude.
-- The **GitHub** connector authorized (only needed for `git-summary`).
+- The **Airtable** connector authorized (used by `weekly-515-rollup`).
 - **Claude in Chrome** (the browser extension) for the sources read through the browser:
-  Slack, Jira, OneNote, Airtable, Cowork, and claude.ai chat.
+  Slack, Jira, OneNote, GitHub, and claude.ai chat — be signed in to each in Chrome.
 
 ## Step 1 — Install the plugin from the marketplace
 
@@ -80,7 +80,7 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
 ## Step 3 — Browser access (Claude in Chrome)
 
-The browser-based collectors (Slack, Jira, OneNote, Airtable, Cowork, claude.ai) open pages via the
+The browser-based collectors (Slack, Jira, OneNote, GitHub, claude.ai) open pages via the
 Claude-in-Chrome extension. Make sure you're already signed in to each service in Chrome before you
 run the workflow.
 

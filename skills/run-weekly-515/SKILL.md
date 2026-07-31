@@ -30,9 +30,9 @@ and move on:
 2. `email-summary`  (Outlook sent + received)
 3. `calendar-summary`  (Outlook events)
 4. `onenote-summary`  (local/OneDrive notes export)
-5. `git-summary`  (GitHub — needs the connector authorized)
+5. `git-summary`  (GitHub — via browser, Claude in Chrome)
 6. `jira-summary`  (saved Jira filter, via browser)
-7. `claude-summary`  (Claude Code local sessions + claude.ai chat + Cowork, via browser)
+7. `claude-summary`  (Claude Code local sessions + claude.ai chat via browser + Cowork via desktop app)
 
 Each writes one file into the `<FRIDAY>` folder. Keep a running note of which succeeded and which
 were skipped (source empty, connector not authorized, or config like a filter/notes path not set).

@@ -34,19 +34,22 @@ folder name.
 This was a deliberate design choice, not a limitation to "fix":
 
 - **Microsoft 365 connector** (Outlook mail, calendar, Teams) — used directly. Already connected.
-- **GitHub connector** — used directly by `git-summary`. Needs authorization in the Claude app
-  before it works; if unauthorized, `git-summary` should note that and not block the others.
+- **GitHub** — read through the **browser** (Claude in Chrome) by `git-summary`, using GitHub's
+  search UI scoped to the user + week. No GitHub MCP connector is available in this environment, so
+  the browser is the path; if GitHub isn't reachable, `git-summary` notes that and doesn't block the
+  others. (Optional `GITHUB_USER` config key; otherwise the login is read from the signed-in session.)
 - **Slack** — uses Slackbot's built-in weekly summary read through the browser (Claude in Chrome),
   NOT the Slack connector. Reason: the Slack connector requires enumerating every chat to access,
   which you didn't want. Slackbot's own recap already covers the workspace.
 - **Jira** — read through the browser via your saved filter. No Atlassian connector needed.
-- **Airtable** — read through the browser (roll-up reads the last few 515 records to learn the
-  format). No Airtable connector needed.
+- **Airtable** — read via the **Airtable connector** (roll-up reads the last few 515 records to learn
+  the format). Falls back to the browser (`AIRTABLE_515_URL`) if the connector isn't available.
 - **Claude** (`claude-summary`) — three surfaces, mixed access:
   - **Claude Code** is read from **local session transcripts** on disk (`~/.claude/projects/*/*.jsonl`),
     filtered to the Mon–Fri window by each turn's ISO `timestamp` and grouped by the session's `cwd`.
     No connector or browser — but the sessions must live on the machine the plugin runs on.
-  - **claude.ai chat** and **Cowork** are read through the browser, like the other browser sources.
+  - **claude.ai chat** is read through the browser. **Cowork** is read from the **desktop app**
+    (its task list / on-disk history) — Cowork is desktop-only and has no browsable web URL.
 
 Browser sources just need you signed in to those sites in Chrome with the Claude in Chrome
 extension connected.
@@ -66,8 +69,9 @@ All person/machine-specific values live in `shared/config.md` (git-ignored — c
 ## Open items / TODO
 
 - [ ] Set `AIRTABLE_515_URL` in `shared/config.md`.
-- [ ] Authorize the GitHub connector in the Claude app if git activity should appear in reports
-      (optional; `git-summary` degrades gracefully without it).
+- [ ] Be signed in to GitHub in Chrome so `git-summary` can read it via the browser (no GitHub
+      connector is used; the skill degrades gracefully if GitHub isn't reachable). Optionally set
+      `GITHUB_USER` in config.
 - [ ] First real run: trigger `run-weekly-515` on a Friday and sanity-check each output file, then
       tune the summary sections/tone to match how you actually write your 515.
 - No auto-run / scheduling — you run this manually. (Decided against a scheduled task.)

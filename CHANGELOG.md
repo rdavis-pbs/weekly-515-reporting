@@ -2,6 +2,17 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.8.0
+- `weekly-515-rollup`: now reads recent 515 records via the **Airtable connector** (MCP) instead of
+  the browser — the connector is authorized in this environment. Base/table/view IDs come from
+  `AIRTABLE_515_URL`. Falls back to the browser (`AIRTABLE_515_URL` via Claude in Chrome) if the
+  connector isn't available. Still strictly read-only.
+- `git-summary`: now reads GitHub **through the browser** (Claude in Chrome) using GitHub's search
+  UI scoped to the user and week, since no GitHub MCP connector is available. Optional new config
+  key `GITHUB_USER`; if unset, the login is read from the signed-in GitHub session.
+- README, `config.example.md`, `docs/COLLEAGUE-SETUP.md`, and `docs/PROJECT-NOTES.md` updated to
+  match the new connector/browser split.
+
 ## 0.7.0
 - Config location moved again — this time to make it work in **remote Cowork sessions**. The v0.6.0
   home-dir path (`~/.weekly-515-reporting/config.md`) breaks in Cowork because the sandbox's home

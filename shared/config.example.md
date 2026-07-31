@@ -18,8 +18,12 @@ JIRA_FILTER_URL  = <your Jira saved-filter URL, e.g. https://yourorg.atlassian.n
 # SharePoint/OneDrive-hosted OneNote notebook URL (onenote-summary reads this)
 ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 
-# Airtable 515 base/view URL (weekly-515-rollup reads this)
+# Airtable 515 base/view URL (weekly-515-rollup reads this via the Airtable connector)
 AIRTABLE_515_URL = <your 515 base/view URL, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
+
+# OPTIONAL. Your GitHub username (git-summary reads GitHub through the browser). If omitted,
+# git-summary reads your login from the signed-in GitHub session.
+# GITHUB_USER    = <your GitHub login>
 
 # OPTIONAL. By default reports are written into the same folder as this config (the folder you
 # connected). Set OUTPUT_ROOT only if you want them written somewhere else.
