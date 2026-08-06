@@ -176,6 +176,7 @@ def main(argv=None):
     ap.add_argument("--verbose", action="store_true", help="log each HTTP request to stderr")
     args = ap.parse_args(argv)
 
+    c.force_utf8_output()
     config_path = c.find_config(args.config)
     config = c.parse_kv(config_path)
     c.note("config: %s" % config_path)

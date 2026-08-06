@@ -41,6 +41,14 @@ All notable changes to the weekly-515-reporting plugin.
   the v0.6.0→v0.7.0 config moves were deleted.
 - Fixed `shared/work-week.md` hardcoding `python3`, which is a non-functional stub on Windows; it now
   probes for a working interpreter.
+- Both fetch scripts now force UTF-8 on stdout/stderr. Windows consoles default to a legacy codepage
+  (cp1252), so one emoji or CJK character in a commit message or Jira comment raised
+  `UnicodeEncodeError` — *after* the JSON artifact had been written, making a successful fetch look
+  like a crash. The JSON was always written as UTF-8 and was never affected.
+- Fixed commit attribution in `github_fetch.py`: filtering on an exact `author == login` match dropped
+  every commit whose email isn't linked to a GitHub account, because the author field falls back to
+  the raw git name in that case. Since `author:LOGIN` in the query already constrains attribution, the
+  filter now only drops commits GitHub positively attributes to someone else.
 - Docs corrected: releases ship via the **GitHub marketplace** (`rdavis-pbs/weekly-515-reporting`),
   not by zipping a `.plugin` file, and `PROJECT-NOTES.md` no longer points at the long-obsolete
   `shared/config.md` location.

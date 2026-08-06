@@ -24,6 +24,21 @@ import urllib.request
 # --------------------------------------------------------------------------- output
 
 
+def force_utf8_output():
+    """Make stdout/stderr tolerate any character the APIs hand back.
+
+    On Windows these default to a legacy codepage (cp1252 here), so a single emoji or CJK character
+    in a commit message or Jira comment raises UnicodeEncodeError -- and it would do so *after* the
+    JSON artifact was already written, turning a successful fetch into an apparent crash. The JSON
+    itself is always written as UTF-8 and is unaffected; this only concerns the console digest.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass                                    # older Python or an already-wrapped stream
+
+
 def die(message, code=2):
     sys.stderr.write("ERROR: %s\n" % message)
     sys.exit(code)
