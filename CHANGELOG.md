@@ -2,6 +2,49 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.9.0
+- **`jira-summary` now uses the Atlassian Jira Cloud REST API instead of the browser.** PBS disabled
+  the Claude-in-Chrome extension, so the browser path was dead. New bundled script
+  `scripts/jira_fetch.py` (stdlib Python only — no pip installs, no MCP server) authenticates with a
+  personal API token, runs your JQL, and pulls each matching issue's changelog and comments.
+- **Attribution is now enforced mechanically.** The script keeps only comments and field changes
+  whose *author is you*, dated inside the window, and writes them to `<FRIDAY>/jira-activity.json`
+  for the skill to summarize. Previously the skill had to infer authorship while reading pages.
+  Issues that matched the query but hold none of your activity are listed separately rather than
+  dropped silently.
+- **JQL dates are parameterized.** `JIRA_JQL` in config takes `{start}`/`{end}` placeholders filled
+  per run, replacing the old "saved filter has hardcoded dates, ignore them" workaround. New config
+  keys `JIRA_SITE` and `JIRA_EMAIL`; `JIRA_FILTER_URL` is now only a human convenience link.
+- **Secrets split out of config.** The API token lives in `.weekly-515-reporting/credentials.md`
+  (new template `shared/credentials.example.md`), so `config.md` stays safe to share. The token can
+  also come from the `JIRA_API_TOKEN` environment variable.
+- **`git-summary` now uses the GitHub REST API instead of the browser**, for the same reason. New
+  bundled script `scripts/github_fetch.py` searches across every repo the token can see and returns
+  six buckets: commits authored, PRs opened, PRs merged, PRs reviewed, issues opened, issues closed.
+  For reviewed PRs it fetches the actual review objects, since `reviewed-by:` matches PRs reviewed at
+  any time — only the reviews themselves say when the user reviewed and whether they approved or
+  requested changes. New credential `GITHUB_TOKEN`; new optional config keys `GITHUB_HOST` (GitHub
+  Enterprise Server) and a repurposed `GITHUB_USER` (defaults to the token's own account).
+  - Note the failure mode called out in the script and skill: a token lacking `repo` scope
+    authenticates fine but returns **zero** results for private-repo work. Empty counts are reported
+    as a probable scope problem rather than as "no activity."
+- **New `scripts/_common.py`** holding the logic both fetch scripts share: config discovery, secret
+  resolution, the retrying HTTP client, and the week-anchor rule. `anchor_friday()` there is now the
+  single Python implementation of the week rule, paired only with the shell snippet in
+  `shared/work-week.md`.
+- **Week cutover moved from Saturday to Wednesday** in `shared/work-week.md`, affecting every
+  collector: run Wed–Sun → this week, run Mon or Tue → last week. Early in the week you're still
+  reporting on the week that just ended.
+- **Config discovery hardened.** It now walks *up* from the working directory, so running from a
+  subfolder no longer misses the workspace config and silently fall back to the legacy home-directory
+  copy. When multiple configs exist it warns and names them. Three stale duplicates left over from
+  the v0.6.0→v0.7.0 config moves were deleted.
+- Fixed `shared/work-week.md` hardcoding `python3`, which is a non-functional stub on Windows; it now
+  probes for a working interpreter.
+- Docs corrected: releases ship via the **GitHub marketplace** (`rdavis-pbs/weekly-515-reporting`),
+  not by zipping a `.plugin` file, and `PROJECT-NOTES.md` no longer points at the long-obsolete
+  `shared/config.md` location.
+
 ## 0.8.0
 - `weekly-515-rollup`: now reads recent 515 records via the **Airtable connector** (MCP) instead of
   the browser — the connector is authorized in this environment. Base/table/view IDs come from

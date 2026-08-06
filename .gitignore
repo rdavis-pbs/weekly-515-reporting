@@ -1,5 +1,10 @@
-# Local config with real, person/machine-specific values (copy config.example.md → config.md)
+# Local config and secrets with real, person/machine-specific values. These belong in
+# <your workspace>/.weekly-515-reporting/ (outside this repo) — the patterns below are a safety net
+# in case a copy is ever created here. Distribution is a git push to the GitHub marketplace, so
+# anything committed ships to every colleague who installs the plugin.
 shared/config.md
+shared/credentials.md
+.weekly-515-reporting/
 
 # Packaged build artifacts (regenerate from source when cutting a release)
 *.plugin

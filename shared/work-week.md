@@ -5,21 +5,31 @@ the pieces. Use this exact logic so the collectors always agree on the folder na
 
 ## 1. Determine the target work week (Mon–Fri)
 
-The target week is anchored to a Friday:
+The target week is anchored to a Friday, and the cutover is **Wednesday**:
 
-- If **today is Monday–Friday**, use **this** week (this Monday through this Friday).
-- If **today is Saturday or Sunday**, use the week that just finished (the previous Mon–Fri).
+- If **today is Wednesday–Sunday**, use **this** week (this Monday through this Friday). Weeks are
+  Monday-start, so on Saturday and Sunday "this week's Friday" is the Friday that just passed.
+- If **today is Monday or Tuesday**, use **last** week — early in the week you are still reporting
+  on the week that just ended, not the one barely underway.
 
 Run this to get the anchor Friday date as `YYYY-MM-DD`. It also prints the Monday and the
 ISO start/end timestamps you can hand to search tools:
 
 ```bash
-python3 - <<'PY'
+# Pick a working Python. On Windows a bare `python3` can be a non-functional Store stub, so try
+# `python` first and verify the interpreter actually runs before committing to it.
+PY=""
+for c in python python3 py; do command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys" >/dev/null 2>&1 && PY="$c" && break; done
+[ -z "$PY" ] && echo "No working Python found" >&2
+
+"$PY" - <<'PY'
 import datetime
 today = datetime.date.today()
-wd = today.weekday()            # Mon=0 ... Sun=6
-monday = today - datetime.timedelta(days=wd)   # weekend falls back to the week just ended
-friday = monday + datetime.timedelta(days=4)
+wd = today.weekday()                                    # Mon=0 ... Sun=6
+friday = today - datetime.timedelta(days=wd - 4)        # this Monday-start week's Friday
+if wd <= 1:                                             # Monday or Tuesday -> report on last week
+    friday -= datetime.timedelta(days=7)
+monday = friday - datetime.timedelta(days=4)
 print("FRIDAY=" + friday.isoformat())
 print("MONDAY=" + monday.isoformat())
 print("WEEK_START=" + monday.isoformat() + "T00:00:00")
@@ -52,11 +62,17 @@ itself (`chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `onenote-s
 
 ## 2b. Config location (persistent, portable across Windows / macOS / Cowork)
 
-All person-specific values (`SLACK_URL`, `JIRA_FILTER_URL`, `ONENOTE_URL`, `AIRTABLE_515_URL`, and
-optionally `OUTPUT_ROOT`) live in **one** file inside a folder you control:
+All person-specific values (`SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_JQL`, `ONENOTE_URL`,
+`AIRTABLE_515_URL`, and optionally `OUTPUT_ROOT`) live in **one** file inside a folder you control:
 
 ```
 <WORKSPACE>/.weekly-515-reporting/config.md
+```
+
+Secrets live in a **separate** file in the same folder, so the config stays safe to share or paste:
+
+```
+<WORKSPACE>/.weekly-515-reporting/credentials.md      # JIRA_API_TOKEN
 ```
 
 `<WORKSPACE>` is a folder you own and connect to Cowork — e.g. your "515 weekly reports" folder.

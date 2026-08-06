@@ -1,6 +1,6 @@
 {
   "name": "weekly-515-reporting",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Collects your weekly work activity from chat, email, calendar, OneNote, GitHub, Jira, and Claude (Code/chat/Cowork), then distills it into a proposed 515 accomplishments entry matching your Airtable format.",
   "author": {
     "name": "Robert Davis"
