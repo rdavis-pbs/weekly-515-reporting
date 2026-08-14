@@ -16,6 +16,11 @@ its contents.
 # `read:jira-user`. Copy the value immediately; Atlassian shows it only once.
 JIRA_API_TOKEN = <paste your token here>
 
+# Optional but recommended: the expiry date you chose above, as YYYY-MM-DD. Tokens lapse silently --
+# the script keeps working right up until it returns 401 mid-week -- so recording the date here lets
+# jira_fetch.py warn you in the 21 days beforehand. Omit it and the check just stays quiet.
+JIRA_API_TOKEN_EXPIRES = <YYYY-MM-DD>
+
 # GitHub personal access token — create one at https://github.com/settings/tokens
 #   Classic token:      tick `repo` and `read:org`.
 #   Fine-grained token: read-only Contents, Pull requests, Issues, and Metadata on the

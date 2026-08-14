@@ -138,10 +138,10 @@ def credentials_path(config_path):
     return os.path.join(os.path.dirname(config_path), "credentials.md")
 
 
-def resolve_secret(key, config_path, config, help_text=""):
-    """Resolve a secret: environment variable, then credentials.md, then config.md.
+def lookup_key(key, config_path, config):
+    """Find a key in the environment, then credentials.md, then config.md.
 
-    Returns (value, source_description). Exits with guidance if nothing is found.
+    Returns (value, source_description), or (None, None) if it isn't set anywhere.
     """
     env = os.environ.get(key, "").strip()
     if env:
@@ -156,10 +156,59 @@ def resolve_secret(key, config_path, config, help_text=""):
     if config.get(key):
         return config[key], config_path
 
+    return None, None
+
+
+def resolve_secret(key, config_path, config, help_text=""):
+    """Resolve a required secret. Returns (value, source). Exits with guidance if absent."""
+    value, source = lookup_key(key, config_path, config)
+    if value:
+        return value, source
+
     die(
         "No %s found.\n%s\nPut it in %s as:\n  %s = <your value>\n"
-        "(or set the %s environment variable)." % (key, help_text, cred_path, key, key)
+        "(or set the %s environment variable)."
+        % (key, help_text, credentials_path(config_path), key, key)
     )
+
+
+def warn_if_expiring(key, config_path, config, help_text="", warn_within_days=21, today=None):
+    """Warn when an optional `<KEY>_EXPIRES = YYYY-MM-DD` is near or past.
+
+    API tokens do not advertise their own expiry over the API -- a request either works or comes
+    back 401 -- so warning *ahead* of the lapse is only possible if the date was recorded when the
+    token was created. This check is therefore opt-in: with no `<KEY>_EXPIRES` set it stays silent
+    rather than nagging.
+
+    Silent expiry is the failure worth catching. The token stops working mid-week, the collector
+    reports HTTP 401, and that reads like a bug in the script rather than a calendar event -- so a
+    week of reporting is lost before anyone realizes a credential simply aged out.
+
+    Returns the parsed expiry date, or None when unset/unparseable.
+    """
+    name = "%s_EXPIRES" % key
+    raw, source = lookup_key(name, config_path, config)
+    if not raw:
+        return None
+
+    raw = raw.split("#", 1)[0].strip()                       # allow a trailing comment on the line
+    try:
+        expires = datetime.date.fromisoformat(raw[:10])
+    except ValueError:
+        note("WARNING: %s in %s is not a YYYY-MM-DD date (got %r) -- cannot check expiry."
+             % (name, source, raw))
+        return None
+
+    days = (expires - (today or datetime.date.today())).days
+    if days < 0:
+        note("WARNING: %s expired %d day(s) ago on %s. Any HTTP 401 below is expected.\n"
+             "         Rotate it, then update %s in %s.\n%s"
+             % (key, -days, expires.isoformat(), name, source, help_text))
+    elif days <= warn_within_days:
+        note("WARNING: %s expires in %d day(s) on %s -- rotate it before it lapses, or this "
+             "collector will fail mid-week.\n         Update %s in %s once you do.\n%s"
+             % (key, days, expires.isoformat(), name, source, help_text))
+    return expires
 
 
 # --------------------------------------------------------------------------- weeks

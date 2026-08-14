@@ -15,3 +15,4 @@ shared/credentials.md
 Thumbs.db
 .vscode/
 .idea/
+scripts/__pycache__/

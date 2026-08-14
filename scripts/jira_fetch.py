@@ -68,7 +68,10 @@ class Jira(c.HttpClient):
     def auth_error(self, code, detail):
         return c.ApiError(
             "Jira rejected the credentials (HTTP %d). Check JIRA_EMAIL matches the account that "
-            "created the token, and that the token is not revoked/expired.\n%s" % (code, detail)
+            "created the token, and that the token is not revoked/expired.\n"
+            "Tokens expire silently -- record the expiry date as JIRA_API_TOKEN_EXPIRES = "
+            "YYYY-MM-DD in credentials.md and this script will warn you before it lapses.\n%s"
+            % (code, detail)
         )
 
     def myself(self):
@@ -217,6 +220,7 @@ def main(argv=None):
 
     token, token_src = c.resolve_secret("JIRA_API_TOKEN", config_path, config, TOKEN_HELP)
     c.note("token:  %s" % token_src)
+    c.warn_if_expiring("JIRA_API_TOKEN", config_path, config, TOKEN_HELP)
 
     start, end = c.resolve_window(args, c.friday_to_friday_window)
     start_iso, end_iso = start.isoformat(), end.isoformat()
