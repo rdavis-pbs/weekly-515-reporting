@@ -8,10 +8,10 @@ It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get s
 
 - The **Claude desktop app** with Cowork.
 - A **Microsoft 365** account (Outlook mail/calendar, Teams) connected in Claude.
-- The **Airtable** connector authorized (used by `weekly-515-rollup`).
-- An **Atlassian API token** (for `jira-summary`) and a **GitHub token** (for `git-summary`) — Step 3.
-- **Python 3** on the machine you run this from, for the Jira and GitHub fetch scripts. Any recent
-  version works; no packages to install. Already present on most machines.
+- An **Atlassian API token** (`jira-summary`), a **GitHub token** (`git-summary`), and an **Airtable
+  personal access token** (`weekly-515-rollup`) — Step 3. All read-only.
+- **Python 3** on the machine you run this from, for the Jira, GitHub, and Airtable fetch scripts. Any
+  recent version works; no packages to install. Already present on most machines.
 - **Claude in Chrome** (the browser extension) for the sources still read through the browser:
   Slack, OneNote, and claude.ai chat — be signed in to each in Chrome. Jira and GitHub no longer
   need the browser.
@@ -63,7 +63,7 @@ JIRA_EMAIL       = you@example.com
 # Your SharePoint/OneDrive-hosted OneNote notebook URL (onenote-summary reads this)
 ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 
-# Your Airtable 515 base/view URL (weekly-515-rollup reads this)
+# Your Airtable 515 base/view URL (weekly-515-rollup reads this; token goes in credentials.md)
 AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
 # OPTIONAL — reports default to the connected folder this config lives in.
@@ -78,7 +78,8 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
   API token in Step 3).
 - `ONENOTE_URL` — open your OneNote notebook in the browser (SharePoint/OneDrive) and copy the
   `Doc.aspx?...` URL.
-- `AIRTABLE_515_URL` — open your team's 515 base/view in Airtable and copy the URL.
+- `AIRTABLE_515_URL` — open your 515 base/view in Airtable and copy the whole address bar (trailing
+  query junk like `?blocks=hide` is ignored). Prefer **your own** filtered view over a team-wide one.
 - `OUTPUT_ROOT` — optional; leave it commented out and reports go into the connected folder your
   config lives in (`<that folder>/<FRIDAY>/`). Set it only to write reports somewhere else.
 
@@ -86,19 +87,20 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 > a main journal section). If your notes are organized differently, tell Claude how yours are laid
 > out when you run it, or skip that collector.
 
-## Step 3 — API tokens (required for `jira-summary` and `git-summary`)
+## Step 3 — API tokens (required for `jira-summary`, `git-summary`, and `weekly-515-rollup`)
 
-Both of these read through REST APIs rather than the browser, so each needs a personal token. Tokens
+These read through REST APIs rather than the browser, so each needs a personal token. Tokens
 inherit **your own** permissions — they can only see what you can already see, and the plugin only
-ever reads. Both go in the same file:
+ever reads. All three go in the same file:
 
 ```
 <your connected folder>/.weekly-515-reporting/credentials.md
 ```
 
 ```
-JIRA_API_TOKEN = <paste>
-GITHUB_TOKEN   = <paste>
+JIRA_API_TOKEN   = <paste>
+GITHUB_TOKEN     = <paste>
+AIRTABLE_API_KEY = <paste>
 ```
 
 The template is `shared/credentials.example.md`. Treat this file like a password file — it stays
@@ -149,9 +151,39 @@ python <plugin>/scripts/github_fetch.py --check
 **On GitHub Enterprise Server?** Add `GITHUB_HOST = github.yourcompany.com` to `config.md`; the
 script switches to that host's API automatically.
 
-**Tokens expire** (Atlassian defaults to about a year; GitHub uses whatever expiry you pick). When one
-does, that collector fails with a clear `HTTP 401`; create a replacement, paste it into
-`credentials.md`, and revoke the old one.
+### 3c — Airtable personal access token (`weekly-515-rollup`)
+
+1. Go to <https://airtable.com/create/tokens> and click **Create token**.
+2. Under **Scopes**, add `data.records:read` and `schema.bases:read`.
+3. Under **Access**, add the base your 515 tracker lives in.
+4. Save it as `AIRTABLE_API_KEY` in `credentials.md`.
+5. Verify:
+
+```bash
+python <plugin>/scripts/airtable_fetch.py --check
+```
+
+That prints your table and view names, the field list, and whether the view returns any records.
+
+> **Don't skip the Access step.** A token with scopes but no base added authenticates fine and then
+> returns **HTTP 404 for the base** — it reads like a wrong URL rather than a permissions problem.
+>
+> **`schema.bases:read` is worth adding.** It's what supplies your real field names and the valid
+> options for select fields like Goals. Without it the roll-up still runs, but it has to guess those
+> values and you end up fixing them by hand on every paste.
+>
+> **Point `AIRTABLE_515_URL` at your own view** if your table holds the whole team's entries. The
+> collector inherits that view's filters, so an unfiltered view means your draft gets modeled on
+> colleagues' records. It warns you when the records it sampled span several people.
+
+Read-only is deliberate here: the roll-up writes a local draft you review and paste into Airtable
+yourself, so no token in this plugin ever needs write access.
+
+**Tokens expire** (Atlassian defaults to about a year; GitHub and Airtable use whatever expiry you
+pick). When one does, that collector fails with a clear `HTTP 401`; create a replacement, paste it
+into `credentials.md`, and revoke the old one. If you record the expiry date alongside the token —
+`JIRA_API_TOKEN_EXPIRES`, `AIRTABLE_API_KEY_EXPIRES` — the collector warns you for the three weeks
+beforehand instead of failing mid-week.
 
 ## Step 4 — Browser access (Claude in Chrome)
 
@@ -216,7 +248,8 @@ that same anchor Friday, so its window lines up with the folder.
   you run it on — so run it on the machine where you actually use Claude Code.
 - **A source can be skipped.** If a connector isn't authorized or a URL isn't set, that collector
   notes it was unavailable and the rest still run.
-- **Nothing writes back to your systems.** The Jira API calls and browser collectors only read; the
-  roll-up writes a local draft file — you paste it into Airtable yourself after reviewing.
-- **Jira TLS errors.** If your network inspects TLS and the fetch fails on certificate validation,
-  `jira_fetch.py --insecure` skips verification. Check with your admin before relying on it.
+- **Nothing writes back to your systems.** The Jira, GitHub, and Airtable API calls and the browser
+  collectors only read; the roll-up writes a local draft file — you paste it into Airtable yourself
+  after reviewing. None of the three tokens needs write scope.
+- **TLS errors.** If your network inspects TLS and a fetch fails on certificate validation, every
+  fetch script takes `--insecure` to skip verification. Check with your admin before relying on it.

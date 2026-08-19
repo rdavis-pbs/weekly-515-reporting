@@ -2,6 +2,29 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.10.0
+- **`weekly-515-rollup` now reads Airtable through the Airtable REST API.** New bundled script
+  `scripts/airtable_fetch.py` (stdlib Python only, same shape as the Jira and GitHub fetchers)
+  authenticates with a personal access token, pulls the base/table/view ids out of
+  `AIRTABLE_515_URL`, and writes `<FRIDAY>/airtable-515-records.json`. The connector and browser
+  paths are retained as fallbacks — the API is tried first because both fallbacks were unavailable on
+  the 8/14 run, which left that week's draft formatted from memory rather than confirmed live.
+- **The table schema is now fetched, not guessed.** The artifact carries real field names in table
+  order, field types, and the valid `choices` for every select field — so a drafted `#N Goals` uses
+  option values that actually exist instead of ones the user has to correct on paste. This is why the
+  token wants `schema.bases:read` alongside `data.records:read`; without it the collector still runs
+  and says what's missing.
+- **Records are ordered by the reported week, not by creation time.** The script sorts on the
+  week-ending date field so "the most recent records" means the most recent *weeks* — a backfilled or
+  re-edited record can't jump the queue and become the format sample.
+- **Unfiltered views are reported.** If the sampled records span several people, the artifact says so:
+  on a team-wide table that means the draft would otherwise be modeled on colleagues' entries, which
+  reads as a formatting choice rather than a bug.
+- **Still strictly read-only.** GETs only; the token needs no write scope. The roll-up continues to
+  end at a local draft file that the user reviews and pastes in themselves.
+- New credential `AIRTABLE_API_KEY` (plus optional `AIRTABLE_API_KEY_EXPIRES` for the same
+  warn-before-it-lapses check the other tokens get). `AIRTABLE_515_URL` is unchanged.
+
 ## 0.9.0
 - **`jira-summary` now uses the Atlassian Jira Cloud REST API instead of the browser.** PBS disabled
   the Claude-in-Chrome extension, so the browser path was dead. New bundled script

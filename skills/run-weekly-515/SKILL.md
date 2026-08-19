@@ -39,8 +39,9 @@ were skipped (source empty, connector not authorized, or config like a filter/no
 
 ## Step 3 — Roll up
 
-Run the `weekly-515-rollup` skill. It reads the recent Airtable 515 records and every summary file
-in the `<FRIDAY>` folder, then writes `proposed 515 accomplishments.md`.
+Run the `weekly-515-rollup` skill. It reads the recent Airtable 515 records and table schema (via the
+Airtable REST API — no browser) plus every summary file in the `<FRIDAY>` folder, then writes
+`proposed 515 accomplishments.md`.
 
 ## Step 4 — Report
 

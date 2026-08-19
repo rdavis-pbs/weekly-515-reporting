@@ -38,7 +38,12 @@ JIRA_EMAIL       = <the email on your Atlassian account, e.g. you@example.com>
 # SharePoint/OneDrive-hosted OneNote notebook URL (onenote-summary reads this)
 ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 
-# Airtable 515 base/view URL (weekly-515-rollup reads this via the Airtable connector)
+# --- Airtable (weekly-515-rollup reads this via the Airtable REST API) ---
+# Open your 515 table in the browser and paste the whole address bar; the base (app...), table
+# (tbl...) and view (viw...) ids are read out of it, and trailing query junk like ?blocks=hide is
+# ignored. Point it at YOUR OWN view if the table holds the whole team's entries -- the collector
+# inherits the view's filters, and an unfiltered view means the draft gets modeled on colleagues'
+# records. The token goes in credentials.md, NOT here.
 AIRTABLE_515_URL = <your 515 base/view URL, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
 
 # OPTIONAL. Your GitHub login. If omitted, git-summary uses the account that owns GITHUB_TOKEN.

@@ -28,12 +28,26 @@ JIRA_API_TOKEN_EXPIRES = <YYYY-MM-DD>
 # The `repo` / Contents permission is what makes PRIVATE repo activity visible. Without it the
 # weekly summary silently shows only your public work, which usually looks like "no activity."
 GITHUB_TOKEN = <paste your token here>
+
+# Airtable personal access token — create one at https://airtable.com/create/tokens
+#   Scopes: `data.records:read` and `schema.bases:read`.
+#   Access: add the base your 515 tracker lives in (the app... id in AIRTABLE_515_URL).
+# Read-only is deliberate: the roll-up drafts a local file and you paste it in yourself, so the
+# token never needs write scope. `schema.bases:read` is what supplies your real field names and the
+# valid select options (e.g. the Goals list) — without it the draft has to guess them and you fix
+# every one by hand. Adding no base under Access is the easy mistake: the token then authenticates
+# fine but returns 404 for the base.
+AIRTABLE_API_KEY = <paste your token here>
+
+# Optional, same as above: the expiry you chose, as YYYY-MM-DD, so the collector can warn you ahead
+# of a silent lapse instead of failing mid-week.
+AIRTABLE_API_KEY_EXPIRES = <YYYY-MM-DD>
 ```
 
 ## Alternatives to this file
 
-Both fetch scripts resolve their token in this order, first hit wins (`JIRA_API_TOKEN` for
-`jira_fetch.py`, `GITHUB_TOKEN` for `github_fetch.py`):
+All three fetch scripts resolve their token in this order, first hit wins (`JIRA_API_TOKEN` for
+`jira_fetch.py`, `GITHUB_TOKEN` for `github_fetch.py`, `AIRTABLE_API_KEY` for `airtable_fetch.py`):
 
 1. The environment variable of that name.
 2. The key in this file.
@@ -45,6 +59,6 @@ portable choice.
 
 ## Rotating or revoking
 
-Tokens expire — Atlassian defaults to about a year, and GitHub tokens carry whatever expiry you
-chose. When one does, the fetch script fails with a clear `HTTP 401`. Create a replacement at the URL
-above, paste it here, and revoke the old one. Nothing else needs to change.
+Tokens expire — Atlassian defaults to about a year, and GitHub and Airtable tokens carry whatever
+expiry you chose. When one does, the fetch script fails with a clear `HTTP 401`. Create a replacement
+at the URL above, paste it here, and revoke the old one. Nothing else needs to change.

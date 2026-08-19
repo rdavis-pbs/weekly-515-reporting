@@ -63,8 +63,14 @@ This was a deliberate design choice, not a limitation to "fix":
   needs no per-surface registration and behaves identically in Cowork and Claude Code. (An MCP
   server would only pay off if Jira needed to be queried interactively; the fetch code could be
   lifted into one later.)
-- **Airtable** — read via the **Airtable connector** (roll-up reads the last few 515 records to learn
-  the format). Falls back to the browser (`AIRTABLE_515_URL`) if the connector isn't available.
+- **Airtable** — read via the **Airtable REST API** (`scripts/airtable_fetch.py`, `AIRTABLE_API_KEY`),
+  same stdlib-script pattern as Jira and GitHub. The roll-up reads the last few 515 records to learn
+  the format *and* the table schema, which is the part the connector path never gave us: field types
+  and the valid select options, so a drafted `#N Goals` uses values that actually exist. Records are
+  sorted by the week-ending date field rather than creation time, so a backfilled record can't become
+  the format sample. The **connector** and then the **browser** (`AIRTABLE_515_URL`) remain as
+  fallbacks, in that order — kept for colleagues whose setup differs, though on this machine neither
+  runs (see the Chrome note below), which is what motivated the API move.
 - **Claude** (`claude-summary`) — three surfaces, mixed access:
   - **Claude Code** is read from **local session transcripts** on disk (`~/.claude/projects/*/*.jsonl`),
     filtered to the Mon–Fri window by each turn's ISO `timestamp` and grouped by the session's `cwd`.

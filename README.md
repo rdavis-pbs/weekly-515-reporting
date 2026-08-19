@@ -31,7 +31,7 @@ on the folder.
 | `git-summary` | GitHub | **GitHub REST API** via your own token (`scripts/github_fetch.py`) | `git-summary.md` |
 | `jira-summary` | Jira | **Atlassian REST API** via your own API token (`scripts/jira_fetch.py`) | `jira-summary.md` |
 | `claude-summary` | Claude Code + claude.ai chat + Cowork | Local transcripts on disk; chat via browser; Cowork via desktop app | `claude-summary.md` |
-| `weekly-515-rollup` | all of the above + Airtable | Airtable connector | `proposed 515 accomplishments.md` |
+| `weekly-515-rollup` | all of the above + Airtable | **Airtable REST API** via your own token (`scripts/airtable_fetch.py`) | `proposed 515 accomplishments.md` |
 | `run-weekly-515` | — | orchestrates all of the above | — |
 
 Trigger `run-weekly-515` each Friday to do the whole thing, or run any single skill on its own.
@@ -65,10 +65,11 @@ just run any skill and let first-run setup create it for you.
 ## Connectors used
 
 - **Microsoft 365** (Outlook mail, calendar, Teams) — used directly.
-- **Airtable** — used directly by `weekly-515-rollup` via the Airtable connector.
+- **Airtable** — the **Airtable REST API** with your own personal access token, via
+  `scripts/airtable_fetch.py`. Read-only; the Airtable connector and the browser remain as fallbacks.
 - **Jira** — the **Atlassian REST API** with your own API token, via `scripts/jira_fetch.py`.
 - **GitHub** — the **GitHub REST API** with your own token, via `scripts/github_fetch.py`.
-  Both fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
+  All three fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
 - **Slack**, **OneNote**, **claude.ai chat** — accessed through the browser (Claude in Chrome), so no
   connector auth is required; just be signed in to each in Chrome. If your organization has disabled
   the extension, these collectors can't run — paste the material in yourself, or skip them; the
