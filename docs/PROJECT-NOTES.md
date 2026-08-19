@@ -6,10 +6,14 @@ conversation isn't available.
 
 ## What this plugin does
 
-Assembles your weekly **515** report. Seven collector skills each summarize one source of work
-activity for the week and drop a markdown file into a dated folder; a roll-up skill then distills
-all of them into a proposed 515 entry that matches the existing Airtable format. `run-weekly-515`
-runs the whole chain.
+Assembles your weekly **515** report. Eight collector skills each summarize one source for the week
+and drop a markdown file into a dated folder; a roll-up skill then distills all of them into a
+proposed 515 entry that matches the existing Airtable format. `run-weekly-515` runs the whole chain.
+
+Seven collectors look **backward** (what happened). `goals-summary` is the one that looks
+**forward** — the Airtable resource tracker holds committed activities mapped to department goals,
+which is what Next Week's Priorities needs and what no amount of reading this week's chatter can
+reliably produce.
 
 - Output folder: `515 weekly reports/<FRIDAY>/` (e.g. `.../2026-07-17/`), one file per collector,
   plus `proposed 515 accomplishments.md` from the roll-up.
@@ -63,6 +67,16 @@ This was a deliberate design choice, not a limitation to "fix":
   needs no per-surface registration and behaves identically in Cowork and Claude Code. (An MCP
   server would only pay off if Jira needed to be queried interactively; the fetch code could be
   lifted into one later.)
+- **Airtable goals/tasks** (`AIRTABLE_GOALS_URL`, optional) — the user's own view of the team FY
+  goals table, read by the same script into `<FRIDAY>/airtable-goals.json` and used for Next Week's
+  Priorities. **Selection is by due date and completion, deliberately never by status.** In the real
+  table most near-term rows have a blank `Status` while nearly every row that carries one is already
+  overdue, so the obvious `Status in (To Do, In Progress)` filter returns zero rows and reads as "no
+  upcoming work" — a silent wrong answer rather than an error. Everything not Done/Delivered/Cancelled
+  counts as committed; the script's job is ordering (overdue / due_next_7d / due_within_30d / later /
+  undated, relative to the anchor Friday), not filtering. Note the bucket names are relative to the
+  END of the reporting week, so `due_next_7d` is the week after the report — that's the Next Week's
+  Priorities window.
 - **Airtable** — read via the **Airtable REST API** (`scripts/airtable_fetch.py`, `AIRTABLE_API_KEY`),
   same stdlib-script pattern as Jira and GitHub. The roll-up reads the last few 515 records to learn
   the format *and* the table schema, which is the part the connector path never gave us: field types

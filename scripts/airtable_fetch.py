@@ -1,29 +1,36 @@
 #!/usr/bin/env python
 """
-Fetch the user's recent 515 records + the table schema from Airtable via the Airtable REST API.
+Fetch the user's Airtable inputs for the weekly 515 via the Airtable REST API.
 
-Replaces the connector/browser-based Airtable read for the weekly-515-rollup skill, which needs to
-know what shape a 515 record actually takes before drafting one. Stdlib only -- no pip installs.
-Works with `python` or `python3`.
+Replaces the connector/browser-based Airtable reads for the weekly-515-rollup skill. Stdlib only --
+no pip installs. Works with `python` or `python3`.
 
-What it does:
-  1. Resolves config (.weekly-515-reporting/config.md) and the Airtable token.
-  2. Pulls base/table/view IDs out of AIRTABLE_515_URL.
-  3. Reads the table SCHEMA -- field names, types, and the valid choices for single/multi-selects.
-     The choices matter: the draft has to pick real option values (e.g. the Goals list), and
-     guessing them means the user has to fix every one by hand on paste.
-  4. Reads the most recent N records from that view, newest first, so the draft can match the
-     user's own voice, length, and conventions.
-  5. Writes a JSON artifact the weekly-515-rollup skill reads.
+Two independent sources, each written to its own artifact:
+
+  515   (AIRTABLE_515_URL)   -> <FRIDAY>/airtable-515-records.json
+        The user's recent 515 records plus the table SCHEMA -- field names, types, and the valid
+        choices for single/multi-selects. The choices matter: the draft has to pick real option
+        values (e.g. the Goals list), and guessing them means fixing every one by hand on paste.
+
+  goals (AIRTABLE_GOALS_URL) -> <FRIDAY>/airtable-goals.json
+        The user's committed FY tasks, ordered by urgency, so the roll-up can write Next Week's
+        Priorities from what is actually on the hook rather than inferring it from chatter.
+
+        Selection is by DATE and completion, deliberately not by status. In the real table most
+        near-term rows have a BLANK status while every row that carries one is already overdue, so
+        filtering on `Status in (To Do, In Progress)` returns nothing and reads as "no upcoming
+        work" -- a silent wrong answer. Anything not Done/Delivered/Cancelled is treated as
+        committed, and the value added here is ordering, not filtering.
 
 STRICTLY READ-ONLY: only GETs. It never creates, updates, or deletes an Airtable record, and the
 token it asks for does not need write scope.
 
 Usage:
-  python airtable_fetch.py                    # schema + 4 most recent records
-  python airtable_fetch.py --check            # verify auth and reachability only, write nothing
-  python airtable_fetch.py --records 8        # look further back to learn the format
-  python airtable_fetch.py --end 2026-08-14   # write into a specific week's folder
+  python airtable_fetch.py                     # both sources
+  python airtable_fetch.py --check             # verify auth and reachability only, write nothing
+  python airtable_fetch.py --source goals      # just the FY goals/tasks
+  python airtable_fetch.py --records 8         # sample more 515 records to learn the format
+  python airtable_fetch.py --end 2026-08-14    # write into a specific week's folder
 """
 
 import argparse
@@ -45,18 +52,36 @@ DEFAULT_RECORDS = 4
 # (no schema access => no field name to sort on). Keeps a big shared team table bounded.
 LOCAL_SORT_SCAN_CAP = 1000
 
+# How many distinct linked records to resolve to display names. A person-link field holds one or two
+# per record; this only bounds a link field pointing at something large.
+LINK_RESOLVE_CAP = 100
+
+# Resolved link names are display labels, not content. In a self-referencing link (a task's
+# predecessor is another task) the "name" is that task's whole description, so cap it.
+LINK_NAME_CLIP = 150
+
+# Only these statuses mean "no longer on the hook". Everything else -- including blank -- counts as
+# committed. See the module docstring: blank is the normal state for upcoming work in this table.
+GOALS_DONE_STATUSES = ("done", "delivered", "cancelled", "canceled", "complete", "completed")
+
+# Bookkeeping columns that add bulk without informing the report. `Created By` also carries a
+# colleague's name and email, which has no business being copied into a weekly report artifact.
+GOALS_SKIP_FIELDS = ("Created By", "Availability", "From field: Dependency", "Duration (with unit)")
+
 TOKEN_HELP = (
     "Create a personal access token at https://airtable.com/create/tokens\n"
     "  Scopes:  data.records:read  and  schema.bases:read\n"
-    "  Access:  add the base your 515 tracker lives in (the app... id in AIRTABLE_515_URL).\n"
-    "A token with no base added to it authenticates fine but sees nothing -- Airtable returns 404\n"
-    "for the base rather than a permission error, so check Access if that happens."
+    "  Access:  add EVERY base you point the plugin at -- the 515 tracker (app... in\n"
+    "           AIRTABLE_515_URL) and, if set, the goals base (AIRTABLE_GOALS_URL).\n"
+    "A token missing a base authenticates fine but sees nothing -- Airtable returns 404 for that\n"
+    "base rather than a permission error, so check Access if that happens."
 )
 
 SELECT_TYPES = ("singleSelect", "multipleSelects")
+DATE_TYPES = ("date", "dateTime")
 
 
-def parse_airtable_url(url):
+def parse_airtable_url(url, key):
     """Pull (base, table, view) ids out of an Airtable URL. View is optional.
 
     Airtable ids are prefix-typed (app/tbl/viw), so scanning by prefix is more robust than
@@ -65,9 +90,9 @@ def parse_airtable_url(url):
     """
     if not url:
         c.die(
-            "AIRTABLE_515_URL is not set in your config.\n"
-            "Add it as:\n  AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ\n"
-            "(open your 515 table in the browser and copy the address bar)."
+            "%s is not set in your config.\n"
+            "Add it as:\n  %s = https://airtable.com/appXXXX/tblYYYY/viwZZZZ\n"
+            "(open the table in the browser and copy the address bar)." % (key, key)
         )
 
     base = re.search(r"\bapp[A-Za-z0-9]{10,}", url)
@@ -76,8 +101,8 @@ def parse_airtable_url(url):
 
     if not base or not table:
         c.die(
-            "Could not find a base id (app...) and table id (tbl...) in AIRTABLE_515_URL:\n  %s\n"
-            "Expected something like https://airtable.com/appXXXX/tblYYYY/viwZZZZ" % url
+            "Could not find a base id (app...) and table id (tbl...) in %s:\n  %s\n"
+            "Expected something like https://airtable.com/appXXXX/tblYYYY/viwZZZZ" % (key, url)
         )
     return base.group(0), table.group(0), (view.group(0) if view else None)
 
@@ -137,8 +162,8 @@ class Airtable(c.HttpClient):
             if not offset or (max_records and len(out) >= max_records):
                 return out[:max_records] if max_records else out
             if not max_records and len(out) >= LOCAL_SORT_SCAN_CAP:
-                c.note("  NOTE: stopped after %d records (scan cap) -- newest-first ordering is not "
-                       "guaranteed for the remainder." % len(out))
+                c.note("  NOTE: stopped after %d records (scan cap); the rest of the table was not "
+                       "read." % len(out))
                 return out
 
 
@@ -155,7 +180,7 @@ def shape_field(field):
     options = field.get("options") or {}
     if field.get("type") in SELECT_TYPES:
         out["choices"] = [ch.get("name") for ch in (options.get("choices") or [])]
-    if field.get("type") == "date" or field.get("type") == "dateTime":
+    if field.get("type") in DATE_TYPES:
         fmt = (options.get("dateFormat") or {}).get("name")
         if fmt:
             out["date_format"] = fmt
@@ -171,7 +196,7 @@ def date_sort_field(fields):
     recent records" mean the most recent weeks -- a backfilled or re-edited record would otherwise
     jump the queue and the skill would learn the format from the wrong sample.
     """
-    dates = [f for f in fields if f.get("type") in ("date", "dateTime")]
+    dates = [f for f in fields if f.get("type") in DATE_TYPES]
     if not dates:
         return None
     for pattern in (r"week.*end", r"end.*date", r"week"):
@@ -181,62 +206,41 @@ def date_sort_field(fields):
     return dates[0]["name"]
 
 
-def shape_record(record, fields_order):
-    """Flatten a record to {field: value}, in the table's own field order, clipping long text."""
-    raw = record.get("fields") or {}
-    values = {}
-    for name in fields_order:
-        if name not in raw:
-            continue                       # Airtable omits empty cells entirely
-        v = raw[name]
-        if isinstance(v, str):
-            v = c.clip(v, MAX_CELL_CHARS)
-        elif isinstance(v, list):
-            v = [c.clip(x, MAX_CELL_CHARS) if isinstance(x, str) else x for x in v]
-        values[name] = v
-    # Anything the schema didn't describe (or a schema-less run) still gets through.
-    for name, v in raw.items():
-        if name not in values:
-            values[name] = c.clip(v, MAX_CELL_CHARS) if isinstance(v, str) else v
-    return {"id": record.get("id"), "created_time": record.get("createdTime"), "fields": values}
+def due_date_field(fields):
+    """The field that says when a task is on the hook: End, else Due/Target, else any date."""
+    dates = [f for f in fields if f.get("type") in DATE_TYPES]
+    if not dates:
+        return None
+    for pattern in (r"^end$", r"\bdue\b", r"\btarget\b", r"^end", r"finish"):
+        for f in dates:
+            if re.search(pattern, f.get("name") or "", re.I):
+                return f["name"]
+    return dates[-1]["name"]
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(
-        description="Read your recent 515 records and table schema from Airtable (read-only).")
-    ap.add_argument("--config", help="path to .weekly-515-reporting/config.md (auto-discovered if omitted)")
-    ap.add_argument("--records", type=int, default=DEFAULT_RECORDS,
-                    help="how many recent records to fetch (default %d)" % DEFAULT_RECORDS)
-    ap.add_argument("--end", help="week folder to write into, YYYY-MM-DD (default: this week's Friday)")
-    ap.add_argument("--out", help="exact output JSON path (default <OUTPUT_ROOT>/<FRIDAY>/airtable-515-records.json)")
-    ap.add_argument("--check", action="store_true", help="verify auth and reachability; write nothing")
-    ap.add_argument("--insecure", action="store_true", help="skip TLS verification (TLS-inspecting networks)")
-    ap.add_argument("--verbose", action="store_true", help="log each HTTP request to stderr")
-    args = ap.parse_args(argv)
+def pick_field(fields, pattern, types=None):
+    for f in fields:
+        if types and f.get("type") not in types:
+            continue
+        if re.search(pattern, f.get("name") or "", re.I):
+            return f["name"]
+    return None
 
-    c.force_utf8_output()
-    config_path = c.find_config(args.config)
-    config = c.parse_kv(config_path)
-    c.note("config: %s" % config_path)
 
-    base_id, table_id, view_id = parse_airtable_url(config.get("AIRTABLE_515_URL"))
-    c.note("base:   %s / %s%s" % (base_id, table_id, (" / %s" % view_id) if view_id else ""))
+def load_table(at, base_id, table_id, view_id, url_key):
+    """Fetch the base schema and locate one table/view. Returns a dict of what we could learn.
 
-    token, token_src = c.resolve_secret("AIRTABLE_API_KEY", config_path, config, TOKEN_HELP)
-    c.note("token:  %s" % token_src)
-    c.warn_if_expiring("AIRTABLE_API_KEY", config_path, config, TOKEN_HELP)
-
-    at = Airtable(token, insecure=args.insecure, verbose=args.verbose)
-
-    # Schema first: it names the fields, supplies the select choices, and gives us a field to sort
-    # on. It needs schema.bases:read, which a data-only token lacks -- so treat it as optional and
-    # degrade to inferring the shape from the records themselves.
-    table, schema_error = None, None
+    The schema needs `schema.bases:read`, which a data-only token lacks -- so a failure here is
+    downgraded to a warning and the caller carries on with records alone.
+    """
+    table, tables, schema_error = None, [], None
     try:
-        table = find_table(at.base_schema(base_id), table_id)
+        schema = at.base_schema(base_id)
+        tables = schema.get("tables") or []
+        table = find_table(schema, table_id)
         if table is None:
-            schema_error = ("table %s is not in base %s -- check AIRTABLE_515_URL"
-                            % (table_id, base_id))
+            schema_error = ("table %s is not in base %s -- check %s"
+                            % (table_id, base_id, url_key))
     except AuthError as e:
         # 401 = the token is bad, so the records call would fail identically. Fail once, here,
         # instead of printing a scope warning and then the same rejection a moment later.
@@ -249,32 +253,155 @@ def main(argv=None):
     if schema_error:
         c.note("WARNING: could not read the table schema, continuing with records only.\n"
                "         %s\n"
-               "         Field types and select choices (e.g. your Goals options) will be missing;\n"
-               "         add the schema.bases:read scope to the token to get them."
+               "         Field types and select choices will be missing; add the\n"
+               "         schema.bases:read scope to the token to get them."
                % schema_error.replace("\n", "\n         "))
 
     fields = [shape_field(f) for f in (table.get("fields") if table else []) or []]
-    fields_order = [f["name"] for f in fields]
-    sort_field = date_sort_field(fields)
-
     view_name = None
     for v in (table.get("views") if table else []) or []:
         if v.get("id") == view_id:
             view_name = v.get("name")
+
+    primary = None
+    if table:
+        primary = next((f.get("name") for f in (table.get("fields") or [])
+                        if f.get("id") == table.get("primaryFieldId")), None)
+
+    return {"table": table, "tables": tables, "schema_error": schema_error, "fields": fields,
+            "field_order": [f["name"] for f in fields], "view_name": view_name,
+            "primary": primary, "base": base_id, "table_id": table_id, "view": view_id}
+
+
+def resolve_link_fields(at, base_id, tables, table, records):
+    """Replace linked-record ids in the shaped records with the names Airtable displays.
+
+    The REST API returns a link cell as raw record ids (`["rec123"]`) where the UI -- and the old
+    connector path -- showed a person's name. Unresolved, a field like User or Assignee is unusable
+    for both purposes it serves here: naming the person in the draft, and the "is this view actually
+    filtered to me?" check, which would otherwise compare opaque ids.
+
+    Returns a list of notes about anything it couldn't resolve.
+    """
+    notes = []
+    link_fields = {f["name"]: f.get("options", {}).get("linkedTableId")
+                   for f in (table.get("fields") or [])
+                   if f.get("type") == "multipleRecordLinks"}
+    link_fields = {k: v for k, v in link_fields.items() if v}
+    if not link_fields:
+        return notes
+
+    # Group the ids we actually saw by which table they live in, so each table costs one request.
+    wanted = {}
+    for r in records:
+        for name, linked_table_id in link_fields.items():
+            for rid in (r["fields"].get(name) or []):
+                if isinstance(rid, str) and rid.startswith("rec"):
+                    wanted.setdefault(linked_table_id, set()).add(rid)
+
+    resolved = {}
+    for linked_table_id, ids in wanted.items():
+        linked = find_table({"tables": tables}, linked_table_id)
+        if linked is None:
+            notes.append("Could not resolve linked records in table %s (not visible to this token)."
+                         % linked_table_id)
+            continue
+        primary = next((f.get("name") for f in (linked.get("fields") or [])
+                        if f.get("id") == linked.get("primaryFieldId")), None)
+        if not primary:
+            continue
+
+        ids = sorted(ids)
+        if len(ids) > LINK_RESOLVE_CAP:
+            notes.append("Only the first %d linked records in %s were resolved to names."
+                         % (LINK_RESOLVE_CAP, linked.get("name") or linked_table_id))
+            ids = ids[:LINK_RESOLVE_CAP]
+
+        clauses = ["RECORD_ID()='%s'" % rid for rid in ids]
+        formula = clauses[0] if len(clauses) == 1 else "OR(%s)" % ",".join(clauses)
+        try:
+            page = at.request("/v0/%s/%s" % (base_id, linked_table_id),
+                              params={"filterByFormula": formula, "pageSize": 100,
+                                      "fields[]": primary})
+        except c.ApiError as e:
+            notes.append("Could not read names from linked table %s: %s"
+                         % (linked.get("name") or linked_table_id, str(e).splitlines()[0]))
+            continue
+        for rec in page.get("records") or []:
+            value = (rec.get("fields") or {}).get(primary)
+            if isinstance(value, str) and value.strip():
+                # Primary-field values carry stray newlines (a People row reads "Robert\nDavis"),
+                # which would land mid-name in the report. Collapse to single spaces.
+                resolved[rec["id"]] = c.clip(" ".join(value.split()), LINK_NAME_CLIP)
+
+    if resolved:
+        for r in records:
+            for name in link_fields:
+                v = r["fields"].get(name)
+                if isinstance(v, list):
+                    r["fields"][name] = [resolved.get(x, x) if isinstance(x, str) else x for x in v]
+    return notes
+
+
+def shape_record(record, fields_order, skip=()):
+    """Flatten a record to {field: value}, in the table's own field order, clipping long text."""
+    raw = record.get("fields") or {}
+    values = {}
+
+    def keep(name, v):
+        if name in skip:
+            return
+        if isinstance(v, str):
+            v = c.clip(v, MAX_CELL_CHARS)
+        elif isinstance(v, list):
+            v = [c.clip(x, MAX_CELL_CHARS) if isinstance(x, str) else x for x in v]
+        values[name] = v
+
+    for name in fields_order:
+        if name in raw:                    # Airtable omits empty cells entirely
+            keep(name, raw[name])
+    # Anything the schema didn't describe (or a schema-less run) still gets through.
+    for name, v in raw.items():
+        if name not in values:
+            keep(name, v)
+    return {"id": record.get("id"), "created_time": record.get("createdTime"), "fields": values}
+
+
+def infer_field_order(records):
+    seen = []
+    for r in records:
+        for name in r["fields"]:
+            if name not in seen:
+                seen.append(name)
+    return seen
+
+
+# --------------------------------------------------------------------------- 515 source
+
+
+def run_515(at, args, config, config_path, folder):
+    base_id, table_id, view_id = parse_airtable_url(config.get("AIRTABLE_515_URL"),
+                                                    "AIRTABLE_515_URL")
+    c.note("515:    %s / %s%s" % (base_id, table_id, (" / %s" % view_id) if view_id else ""))
+
+    meta = load_table(at, base_id, table_id, view_id, "AIRTABLE_515_URL")
+    fields, fields_order = meta["fields"], meta["field_order"]
+    sort_field = date_sort_field(fields)
 
     if args.check:
         try:
             probe = at.records(base_id, table_id, view=view_id, sort_field=sort_field, max_records=1)
         except c.ApiError as e:
             c.die(str(e))
-        print("OK: authenticated to Airtable and read base %s." % base_id)
-        print("Table: %s" % (table.get("name") if table else "%s (schema unavailable)" % table_id))
+        print("\n[515] OK: read base %s." % base_id)
+        print("  Table: %s" % (meta["table"].get("name") if meta["table"]
+                               else "%s (schema unavailable)" % table_id))
         if view_id:
-            print("View:  %s" % (view_name or "%s (name unavailable)" % view_id))
-        print("Fields: %s" % (", ".join(fields_order) if fields_order else "(schema unavailable)"))
-        print("Records visible in that view: %s" % ("at least 1" if probe else "0 -- check the "
-              "view's filters and that the token has access to this base"))
-        return 0
+            print("  View:  %s" % (meta["view_name"] or "%s (name unavailable)" % view_id))
+        print("  Fields: %s" % (", ".join(fields_order) if fields_order else "(schema unavailable)"))
+        print("  Records visible: %s" % ("at least 1" if probe else "0 -- check the view's filters "
+              "and that the token has access to this base"))
+        return None
 
     try:
         if sort_field:
@@ -288,23 +415,19 @@ def main(argv=None):
             raw.sort(key=lambda r: r.get("createdTime") or "", reverse=True)
             raw = raw[:args.records]
     except c.ApiError as e:
-        c.die("Airtable read failed.\n%s" % e)
+        c.die("Airtable read failed for the 515 table.\n%s" % e)
 
     records = [shape_record(r, fields_order) for r in raw]
-
-    if not fields_order and records:
-        seen = []
-        for r in records:
-            for name in r["fields"]:
-                if name not in seen:
-                    seen.append(name)
-        fields_order = seen
+    notes = resolve_link_fields(at, base_id, meta["tables"], meta["table"], records) \
+        if meta["table"] else []
+    if not fields_order:
+        fields_order = infer_field_order(records)
 
     # A team-wide table reached through an unfiltered view returns everyone's rows. The draft would
     # then be modeled on colleagues' entries, which reads as a formatting choice rather than a bug,
     # so surface it instead of silently proceeding.
-    people_field = next((n for n in fields_order if re.search(r"^(user|person|name|owner|employee)",
-                                                              n, re.I)), None)
+    people_field = next((n for n in fields_order
+                         if re.search(r"^(user|person|name|owner|employee)", n, re.I)), None)
     people = []
     if people_field:
         for r in records:
@@ -312,31 +435,25 @@ def main(argv=None):
             for name in (v if isinstance(v, list) else [v]):
                 if isinstance(name, str) and name not in people:
                     people.append(name)
-    notes = []
     if len(people) > 1:
         notes.append(
             "The sampled records span %d people (%s field: %s). This view is probably not filtered "
             "to you -- narrow the view, or point AIRTABLE_515_URL at your personal view, so the "
             "draft is modeled on your own entries."
             % (len(people), people_field, ", ".join(people)))
-    if schema_error:
+    if meta["schema_error"]:
         notes.append("Table schema unavailable (%s). Field types and select choices are missing; "
-                     "add schema.bases:read to the token." % schema_error.splitlines()[0])
-
-    if args.end:
-        try:
-            end = datetime.date.fromisoformat(args.end)
-        except ValueError as e:
-            c.die("Bad --end (expected YYYY-MM-DD): %s" % e)
-    else:
-        end = c.anchor_friday(datetime.date.today())
+                     "add schema.bases:read to the token."
+                     % meta["schema_error"].splitlines()[0])
 
     payload = {
         "generated": datetime.datetime.now().isoformat(timespec="seconds"),
-        "source": {"base": base_id, "table": table_id, "table_name": table.get("name") if table else None,
-                   "view": view_id, "view_name": view_name,
+        "source": {"base": base_id, "table": table_id,
+                   "table_name": meta["table"].get("name") if meta["table"] else None,
+                   "view": view_id, "view_name": meta["view_name"],
                    "url": config.get("AIRTABLE_515_URL")},
         "access": "read-only",
+        "purpose": "format sample -- the shape and voice this week's draft should match",
         "sorted_by": sort_field or "createdTime (local sort)",
         "fields": fields,
         "field_order": fields_order,
@@ -344,36 +461,292 @@ def main(argv=None):
         "notes": notes,
     }
 
-    out_path = c.output_path(args.out, config_path, config, end.isoformat(),
+    out_path = c.output_path(args.out_515, config_path, config, folder,
                              "airtable-515-records.json")
     c.write_json(out_path, payload)
 
-    print("Wrote %s" % out_path)
-    print("Table: %s%s" % (table.get("name") if table else table_id,
-                           ("  /  view: %s" % view_name) if view_name else ""))
-    print("Records: %d (newest first by %s)" % (len(records), payload["sorted_by"]))
+    print("\n[515] Wrote %s" % out_path)
+    print("  Table: %s%s" % (meta["table"].get("name") if meta["table"] else table_id,
+                             ("  /  view: %s" % meta["view_name"]) if meta["view_name"] else ""))
+    print("  Records: %d (newest first by %s)" % (len(records), payload["sorted_by"]))
     if fields:
-        print("\nFields:")
         for f in fields:
             extra = ""
             if f.get("choices"):
-                shown = ", ".join(f["choices"][:8])
-                extra = "  [%s%s]" % (shown, ", ..." if len(f["choices"]) > 8 else "")
-            print("  %-28s %-18s%s" % (f["name"], f["type"], extra))
-    elif fields_order:
-        print("\nFields (from records): %s" % ", ".join(fields_order))
+                shown = ", ".join(f["choices"][:6])
+                extra = "  [%s%s]" % (shown, ", ..." if len(f["choices"]) > 6 else "")
+            print("    %-30s %-20s%s" % (f["name"], f["type"], extra))
+    # Show the reported week and what it said, not whichever field happens to come first -- in this
+    # table that's an autoNumber, which tells you nothing about the record.
+    text_fields = [f["name"] for f in fields
+                   if f.get("type") in ("multilineText", "singleLineText", "richText")] \
+        or list(fields_order)
     if records:
-        print("\nSampled records:")
+        print("\n  Sampled records (%s):" % (sort_field or "created"))
         for r in records:
-            first = next((("%s=%s" % (k, v)) for k, v in r["fields"].items()
-                          if isinstance(v, (str, int, float)) and str(v).strip()), r["id"])
-            print("  %s  %s" % (r["created_time"][:10] if r.get("created_time") else "?",
-                               c.clip(first, 90)))
+            week = r["fields"].get(sort_field) if sort_field else None
+            gist = next((r["fields"][n] for n in text_fields
+                         if isinstance(r["fields"].get(n), str) and r["fields"][n].strip()), "")
+            print("    %-12s %s" % (str(week)[:10] if week else (r["created_time"] or "?")[:10],
+                                    c.clip(gist.replace("\n", " "), 96) or r["id"]))
+        if people:
+            print("\n  User(s) in the sample: %s" % ", ".join(people))
     else:
-        print("\nNo records returned. Check the view's filters and that the token has access to "
-              "this base -- see the scope notes in credentials.md.")
+        print("\n  No records returned. Check the view's filters and that the token has access to "
+              "this base.")
     for n in notes:
-        print("\nNOTE: %s" % n)
+        print("\n  NOTE: %s" % n)
+    return payload
+
+
+# --------------------------------------------------------------------------- goals source
+
+
+def urgency_of(due_iso, anchor):
+    """Bucket a due date relative to the reporting week's Friday. Returns (bucket, days_until).
+
+    The anchor is the END of the week being reported on, so 0-7 days past it is the week *after*
+    the report -- which is exactly the "Next Week's Priorities" field. Naming that bucket
+    "due_this_week" would put next week's work under this week's heading.
+    """
+    if not due_iso:
+        return "undated", None
+    try:
+        due = datetime.date.fromisoformat(str(due_iso)[:10])
+    except ValueError:
+        return "undated", None
+    days = (due - anchor).days
+    if days < 0:
+        return "overdue", days
+    if days <= 7:
+        return "due_next_7d", days
+    if days <= 30:
+        return "due_within_30d", days
+    return "later", days
+
+
+BUCKET_ORDER = ("overdue", "due_next_7d", "due_within_30d", "later", "undated")
+
+
+def run_goals(at, args, config, config_path, folder, anchor):
+    url = config.get("AIRTABLE_GOALS_URL")
+    if not url:
+        # Asked for explicitly => a missing key is an error worth explaining. Part of a `both` run
+        # => the 515 read still stands on its own, so note it and carry on.
+        if args.source == "goals":
+            c.die("AIRTABLE_GOALS_URL is not set in your config (%s).\n"
+                  "Open your goals/tasks view in Airtable, copy the address bar, and add:\n"
+                  "  AIRTABLE_GOALS_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ\n"
+                  "Use your own personal view, not a team-wide one." % config_path)
+        c.note("goals:  AIRTABLE_GOALS_URL not set -- skipping the goals/commitments source.")
+        return None
+
+    base_id, table_id, view_id = parse_airtable_url(url, "AIRTABLE_GOALS_URL")
+    c.note("goals:  %s / %s%s" % (base_id, table_id, (" / %s" % view_id) if view_id else ""))
+
+    meta = load_table(at, base_id, table_id, view_id, "AIRTABLE_GOALS_URL")
+    fields, fields_order = meta["fields"], meta["field_order"]
+
+    due_field = due_date_field(fields)
+    status_field = pick_field(fields, r"status", ("singleSelect", "singleLineText"))
+    start_field = pick_field(fields, r"^start", DATE_TYPES)
+    completed_field = pick_field(fields, r"completed", DATE_TYPES)
+    assignee_field = pick_field(fields, r"assignee|owner|person")
+
+    if args.check:
+        try:
+            probe = at.records(base_id, table_id, view=view_id, max_records=1)
+        except c.ApiError as e:
+            c.die(str(e))
+        print("\n[goals] OK: read base %s." % base_id)
+        print("  Table: %s" % (meta["table"].get("name") if meta["table"]
+                               else "%s (schema unavailable)" % table_id))
+        if view_id:
+            print("  View:  %s" % (meta["view_name"] or "%s (name unavailable)" % view_id))
+        print("  Due-date field: %s   Status field: %s" % (due_field, status_field))
+        print("  Records visible: %s" % ("at least 1" if probe else "0 -- check the view's filters "
+              "and that the token has access to this base"))
+        return None
+
+    try:
+        raw = at.records(base_id, table_id, view=view_id)
+    except c.ApiError as e:
+        c.die("Airtable read failed for the goals table.\n%s" % e)
+
+    all_records = [shape_record(r, fields_order, skip=GOALS_SKIP_FIELDS) for r in raw]
+    notes = resolve_link_fields(at, base_id, meta["tables"], meta["table"], all_records) \
+        if meta["table"] else []
+    if not fields_order:
+        fields_order = infer_field_order(all_records)
+    if not due_field:
+        notes.append("No due-date field found in this table, so nothing can be ordered by urgency; "
+                     "every item is reported as undated.")
+
+    # Completion is the only exclusion. Blank status is the NORMAL state for upcoming work in this
+    # table, so treating a missing status as "not committed" would drop exactly the rows the report
+    # needs. Count what we drop rather than dropping quietly.
+    items, dropped = [], []
+    for r in all_records:
+        f = r["fields"]
+        status = f.get(status_field) if status_field else None
+        status_text = (status if isinstance(status, str) else "") or ""
+        done_by_status = status_text.strip().lower() in GOALS_DONE_STATUSES
+        done_by_date = bool(completed_field and f.get(completed_field))
+        if done_by_status or done_by_date:
+            dropped.append((r, status_text or "completed date set"))
+            continue
+
+        bucket, days = urgency_of(f.get(due_field) if due_field else None, anchor)
+        items.append({
+            "id": r["id"],
+            "title": c.clip(str(f.get(meta["primary"]) or "").replace("\n", " "), 300)
+                     if meta["primary"] else None,
+            "status": status_text or None,
+            "start": f.get(start_field) if start_field else None,
+            "due": f.get(due_field) if due_field else None,
+            "days_until_due": days,
+            "urgency": bucket,
+            "assignee": f.get(assignee_field) if assignee_field else None,
+            "fields": f,
+        })
+
+    # Soonest first; undated last. Within a bucket, earlier due dates come first.
+    items.sort(key=lambda i: (BUCKET_ORDER.index(i["urgency"]),
+                              i["due"] or "9999-12-31", (i["title"] or "")))
+
+    by_urgency = {b: sum(1 for i in items if i["urgency"] == b) for b in BUCKET_ORDER}
+    by_status = {}
+    for i in items:
+        key = i["status"] or "(blank)"
+        by_status[key] = by_status.get(key, 0) + 1
+
+    people = []
+    for i in items:
+        v = i.get("assignee")
+        for name in (v if isinstance(v, list) else [v]):
+            if isinstance(name, str) and name not in people:
+                people.append(name)
+    if len(people) > 1:
+        notes.append(
+            "These items span %d assignees (%s). This view is probably not filtered to you -- point "
+            "AIRTABLE_GOALS_URL at your personal view so the priorities are yours."
+            % (len(people), ", ".join(people)))
+    if status_field and by_status.get("(blank)"):
+        notes.append(
+            "%d of %d committed items have no status set. Selection here is by due date and "
+            "completion, not status, precisely because of that -- do not read a blank status as "
+            "'not started' or as missing data."
+            % (by_status["(blank)"], len(items)))
+    if meta["schema_error"]:
+        notes.append("Table schema unavailable (%s); field detection fell back to record contents."
+                     % meta["schema_error"].splitlines()[0])
+
+    payload = {
+        "generated": datetime.datetime.now().isoformat(timespec="seconds"),
+        "source": {"base": base_id, "table": table_id,
+                   "table_name": meta["table"].get("name") if meta["table"] else None,
+                   "view": view_id, "view_name": meta["view_name"], "url": url},
+        "access": "read-only",
+        "purpose": "committed and upcoming work -- input for Next Week's Priorities",
+        "as_of": anchor.isoformat(),
+        "selection": {
+            "horizon": "none -- the whole remaining fiscal year",
+            "excluded": "only items that are completed (status %s, or a completed date set)"
+                        % "/".join(GOALS_DONE_STATUSES[:3]),
+            "included_blank_status": True,
+            "due_date_field": due_field,
+            "status_field": status_field,
+            "ordering": "urgency bucket, then due date",
+        },
+        "counts": {
+            "in_view": len(all_records),
+            "committed": len(items),
+            "excluded_completed": len(dropped),
+            "by_urgency": by_urgency,
+            "by_status": by_status,
+        },
+        "fields": fields,
+        "items": items,
+        "notes": notes,
+    }
+
+    out_path = c.output_path(args.out_goals, config_path, config, folder, "airtable-goals.json")
+    c.write_json(out_path, payload)
+
+    print("\n[goals] Wrote %s" % out_path)
+    print("  Table: %s%s" % (meta["table"].get("name") if meta["table"] else table_id,
+                             ("  /  view: %s" % meta["view_name"]) if meta["view_name"] else ""))
+    print("  %d in view, %d committed, %d completed/excluded  (as of %s)"
+          % (len(all_records), len(items), len(dropped), anchor.isoformat()))
+    print("  By urgency: %s" % ", ".join("%s=%d" % (b, by_urgency[b]) for b in BUCKET_ORDER
+                                         if by_urgency[b]))
+    for bucket in BUCKET_ORDER:
+        rows = [i for i in items if i["urgency"] == bucket]
+        if not rows:
+            continue
+        print("\n  %s:" % bucket.replace("_", " ").upper())
+        for i in rows:
+            when = i["due"][:10] if i["due"] else "no date"
+            days = ("%+dd" % i["days_until_due"]) if i["days_until_due"] is not None else "    "
+            print("    %-11s %-6s %-22s %s" % (when, days, c.clip(i["status"] or "(blank)", 20),
+                                               c.clip(i["title"] or i["id"], 88)))
+    if people:
+        print("\n  Assignee(s): %s" % ", ".join(people))
+    for n in notes:
+        print("\n  NOTE: %s" % n)
+    return payload
+
+
+# --------------------------------------------------------------------------- main
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        description="Read your 515 format sample and your committed FY work from Airtable "
+                    "(read-only).")
+    ap.add_argument("--config", help="path to .weekly-515-reporting/config.md (auto-discovered if omitted)")
+    ap.add_argument("--source", choices=("both", "515", "goals"), default="both",
+                    help="which Airtable source to read (default both)")
+    ap.add_argument("--records", type=int, default=DEFAULT_RECORDS,
+                    help="how many recent 515 records to sample (default %d)" % DEFAULT_RECORDS)
+    ap.add_argument("--end", help="week folder to write into, YYYY-MM-DD (default: this week's Friday)")
+    ap.add_argument("--out-515", help="exact output path for the 515 artifact")
+    ap.add_argument("--out-goals", help="exact output path for the goals artifact")
+    ap.add_argument("--check", action="store_true", help="verify auth and reachability; write nothing")
+    ap.add_argument("--insecure", action="store_true", help="skip TLS verification (TLS-inspecting networks)")
+    ap.add_argument("--verbose", action="store_true", help="log each HTTP request to stderr")
+    args = ap.parse_args(argv)
+
+    c.force_utf8_output()
+    config_path = c.find_config(args.config)
+    config = c.parse_kv(config_path)
+    c.note("config: %s" % config_path)
+
+    token, token_src = c.resolve_secret("AIRTABLE_API_KEY", config_path, config, TOKEN_HELP)
+    c.note("token:  %s" % token_src)
+    c.warn_if_expiring("AIRTABLE_API_KEY", config_path, config, TOKEN_HELP)
+
+    if args.end:
+        try:
+            anchor = datetime.date.fromisoformat(args.end)
+        except ValueError as e:
+            c.die("Bad --end (expected YYYY-MM-DD): %s" % e)
+    else:
+        anchor = c.anchor_friday(datetime.date.today())
+    folder = anchor.isoformat()
+
+    at = Airtable(token, insecure=args.insecure, verbose=args.verbose)
+
+    wrote = 0
+    if args.source in ("both", "515"):
+        if run_515(at, args, config, config_path, folder) is not None:
+            wrote += 1
+    if args.source in ("both", "goals"):
+        if run_goals(at, args, config, config_path, folder, anchor) is not None:
+            wrote += 1
+
+    if not args.check and not wrote:
+        c.die("Nothing was written -- no Airtable source produced an artifact.")
     return 0
 
 

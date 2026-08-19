@@ -66,6 +66,9 @@ ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 # Your Airtable 515 base/view URL (weekly-515-rollup reads this; token goes in credentials.md)
 AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
+# OPTIONAL — your FY goals/tasks view, used for Next Week's Priorities
+# AIRTABLE_GOALS_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
+
 # OPTIONAL — reports default to the connected folder this config lives in.
 # Set OUTPUT_ROOT only if you want them written somewhere else.
 # OUTPUT_ROOT    = C:\Users\<you>\Claude\Projects\515 weekly reports
@@ -80,6 +83,11 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
   `Doc.aspx?...` URL.
 - `AIRTABLE_515_URL` — open your 515 base/view in Airtable and copy the whole address bar (trailing
   query junk like `?blocks=hide` is ignored). Prefer **your own** filtered view over a team-wide one.
+- `AIRTABLE_GOALS_URL` — optional. Your personal view of your team's FY goals/tasks resource tracker.
+  Setting it enables the `goals-summary` collector, so Next Week's Priorities comes from work you're
+  actually committed to, with due dates, instead of being inferred from the week's activity. It also
+  lets you ask "what's due soon?" on any day without running a 515. Leave it out and that collector is
+  skipped.
 - `OUTPUT_ROOT` — optional; leave it commented out and reports go into the connected folder your
   config lives in (`<that folder>/<FRIDAY>/`). Set it only to write reports somewhere else.
 
@@ -155,7 +163,8 @@ script switches to that host's API automatically.
 
 1. Go to <https://airtable.com/create/tokens> and click **Create token**.
 2. Under **Scopes**, add `data.records:read` and `schema.bases:read`.
-3. Under **Access**, add the base your 515 tracker lives in.
+3. Under **Access**, add the base your 515 tracker lives in — **and** your goals base if you set
+   `AIRTABLE_GOALS_URL`. Both bases need to be on the list.
 4. Save it as `AIRTABLE_API_KEY` in `credentials.md`.
 5. Verify:
 
@@ -163,10 +172,12 @@ script switches to that host's API automatically.
 python <plugin>/scripts/airtable_fetch.py --check
 ```
 
-That prints your table and view names, the field list, and whether the view returns any records.
+That prints each table and view name, the field list, and whether the view returns any records.
 
 > **Don't skip the Access step.** A token with scopes but no base added authenticates fine and then
 > returns **HTTP 404 for the base** — it reads like a wrong URL rather than a permissions problem.
+> This is also the trap when you *add* a second base later: the token keeps working for the first one
+> and 404s only for the new one.
 >
 > **`schema.bases:read` is worth adding.** It's what supplies your real field names and the valid
 > options for select fields like Goals. Without it the roll-up still runs, but it has to guess those

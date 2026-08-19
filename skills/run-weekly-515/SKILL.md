@@ -2,8 +2,8 @@
 name: run-weekly-515
 description: >
   Run the full weekly 515 workflow end to end: collect chat, email, calendar, OneNote, git, Jira,
-  and Claude (Code + chat + Cowork) activity for the current work week, then roll it all up into a
-  proposed 515 entry. This is
+  Claude (Code + chat + Cowork), and Airtable resource-tracker goals for the current work week, then
+  roll it all up into a proposed 515 entry. This is
   the one-click Friday driver for the weekly-515-reporting plugin. Use whenever the user says "run
   my weekly 515", "do my 515", "prep my weekly report", "it's Friday, do my 515", or wants the
   whole weekly report workflow done at once.
@@ -33,14 +33,16 @@ and move on:
 5. `git-summary`  (GitHub via the REST API — no browser)
 6. `jira-summary`  (Jira via the Atlassian REST API — no browser)
 7. `claude-summary`  (Claude Code local sessions + claude.ai chat via browser + Cowork via desktop app)
+8. `goals-summary`  (Airtable resource tracker via the REST API — committed/upcoming work)
 
 Each writes one file into the `<FRIDAY>` folder. Keep a running note of which succeeded and which
 were skipped (source empty, connector not authorized, or config like a filter/notes path not set).
 
 ## Step 3 — Roll up
 
-Run the `weekly-515-rollup` skill. It reads the recent Airtable 515 records and table schema (via the
-Airtable REST API — no browser) plus every summary file in the `<FRIDAY>` folder, then writes
+Run the `weekly-515-rollup` skill. It reads two Airtable sources via the REST API (no browser) — the
+recent 515 records and table schema for the format, and the user's committed FY goals/tasks for Next
+Week's Priorities — plus every summary file in the `<FRIDAY>` folder, then writes
 `proposed 515 accomplishments.md`.
 
 ## Step 4 — Report

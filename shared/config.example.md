@@ -46,6 +46,13 @@ ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 # records. The token goes in credentials.md, NOT here.
 AIRTABLE_515_URL = <your 515 base/view URL, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
 
+# OPTIONAL. Your FY goals/tasks view -- the work you're formally committed to. The roll-up reads it
+# for Next Week's Priorities instead of inferring them from the week's chatter. Same URL rule as
+# above: your own personal view, copied from the address bar. Omit the key to skip this source.
+# If it IS set, remember to add BOTH bases under Access on your Airtable token -- a token missing
+# one base returns 404 for it, which looks like a bad URL rather than a permissions problem.
+# AIRTABLE_GOALS_URL = <your goals base/view URL, e.g. https://airtable.com/appXXXX/tblYYYY/viwZZZZ>
+
 # OPTIONAL. Your GitHub login. If omitted, git-summary uses the account that owns GITHUB_TOKEN.
 # Set it only to report on a different login than the token's own account.
 # GITHUB_USER    = <your GitHub login>

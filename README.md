@@ -1,8 +1,9 @@
 # weekly-515-reporting
 
-A plugin that assembles your weekly **515** report. It gathers a week's worth of work activity
-from six sources, drops a summary file for each into a dated folder, then distills everything into a
-proposed 515 entry that matches the existing Airtable format.
+A plugin that assembles your weekly **515** report. It gathers a week's worth of work activity from
+your chat, mail, calendar, notes, code, tickets, AI sessions, and goals tracker, drops a summary file
+for each into a dated folder, then distills everything into a proposed 515 entry that matches the
+existing Airtable format.
 
 > **New here?** See [docs/COLLEAGUE-SETUP.md](docs/COLLEAGUE-SETUP.md) for step-by-step install and setup.
 
@@ -31,7 +32,8 @@ on the folder.
 | `git-summary` | GitHub | **GitHub REST API** via your own token (`scripts/github_fetch.py`) | `git-summary.md` |
 | `jira-summary` | Jira | **Atlassian REST API** via your own API token (`scripts/jira_fetch.py`) | `jira-summary.md` |
 | `claude-summary` | Claude Code + claude.ai chat + Cowork | Local transcripts on disk; chat via browser; Cowork via desktop app | `claude-summary.md` |
-| `weekly-515-rollup` | all of the above + Airtable | **Airtable REST API** via your own token (`scripts/airtable_fetch.py`) | `proposed 515 accomplishments.md` |
+| `goals-summary` | Airtable resource tracker (FY goals/tasks) | **Airtable REST API** via your own token (`scripts/airtable_fetch.py --source goals`) | `goals-summary.md` |
+| `weekly-515-rollup` | all of the above + your 515 records | **Airtable REST API** via your own token (`scripts/airtable_fetch.py`) | `proposed 515 accomplishments.md` |
 | `run-weekly-515` | — | orchestrates all of the above | — |
 
 Trigger `run-weekly-515` each Friday to do the whole thing, or run any single skill on its own.
@@ -66,7 +68,9 @@ just run any skill and let first-run setup create it for you.
 
 - **Microsoft 365** (Outlook mail, calendar, Teams) — used directly.
 - **Airtable** — the **Airtable REST API** with your own personal access token, via
-  `scripts/airtable_fetch.py`. Read-only; the Airtable connector and the browser remain as fallbacks.
+  `scripts/airtable_fetch.py`. Two sources: your 515 records (`AIRTABLE_515_URL`, for the format) and
+  optionally your FY goals/tasks (`AIRTABLE_GOALS_URL`, for Next Week's Priorities). Read-only; the
+  Airtable connector and the browser remain as fallbacks for the 515 read.
 - **Jira** — the **Atlassian REST API** with your own API token, via `scripts/jira_fetch.py`.
 - **GitHub** — the **GitHub REST API** with your own token, via `scripts/github_fetch.py`.
   All three fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.

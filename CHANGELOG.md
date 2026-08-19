@@ -17,6 +17,10 @@ All notable changes to the weekly-515-reporting plugin.
 - **Records are ordered by the reported week, not by creation time.** The script sorts on the
   week-ending date field so "the most recent records" means the most recent *weeks* — a backfilled or
   re-edited record can't jump the queue and become the format sample.
+- **Linked-record fields resolve to display names.** The REST API returns a link cell as raw record
+  ids (`["rec123"]`) where the connector showed "Robert Davis", so the collector looks up the linked
+  table's primary field. Without this the User field is unfillable and the multi-person check below
+  compares opaque ids.
 - **Unfiltered views are reported.** If the sampled records span several people, the artifact says so:
   on a team-wide table that means the draft would otherwise be modeled on colleagues' entries, which
   reads as a formatting choice rather than a bug.
@@ -24,6 +28,28 @@ All notable changes to the weekly-515-reporting plugin.
   end at a local draft file that the user reviews and pastes in themselves.
 - New credential `AIRTABLE_API_KEY` (plus optional `AIRTABLE_API_KEY_EXPIRES` for the same
   warn-before-it-lapses check the other tokens get). `AIRTABLE_515_URL` is unchanged.
+- **New collector skill `goals-summary`** — the eighth collector, and the only forward-looking one.
+  It reads the Airtable resource tracker (FY goals/tasks, activities mapped to department goals) and
+  writes `<FRIDAY>/goals-summary.md`. It stands alone as an answer to "what's due soon?" / "what am I
+  committed to?" without running a 515, which is why it's a skill rather than a step inside the
+  roll-up. The roll-up reads its output when present and the JSON artifact regardless.
+  - The tracker's own `Department Goals` / `FY Project` values partly coincide with the 515's `#N
+    Goals` options — some match exactly, others are near misses. Where they match, the roll-up now
+    uses the user's own activity-to-goal mapping instead of inferring one; near misses are flagged as
+    inference.
+- **New optional source: your FY goals/tasks table** (`AIRTABLE_GOALS_URL`), written to
+  `<FRIDAY>/airtable-goals.json`. The roll-up now builds **Next Week's Priorities** from work you are
+  formally committed to, with due dates, instead of inferring priorities from the week's chatter.
+  Items arrive pre-sorted into urgency buckets — `overdue`, `due_next_7d`, `due_within_30d`, `later`,
+  `undated` — measured from the reporting week's Friday, so `due_next_7d` is precisely the Next Week
+  window. Omit the key and the source is skipped; the 515 read is unaffected.
+  - **Selection is by due date and completion, never by status** — the one design note worth keeping.
+    In the real table most near-term rows have a blank `Status`, while nearly every row that carries
+    one is already overdue. Filtering on `Status in (To Do, In Progress)` therefore returns *zero*
+    rows and reads as "nothing coming up": a silent wrong answer, not an error. Everything not
+    Done/Delivered/Cancelled counts as committed, and the script adds ordering rather than filtering.
+  - `--source 515|goals|both` runs either or both. `Created By` is dropped from the goals artifact —
+    it carries a colleague's name and email, which has no business in a weekly report file.
 
 ## 0.9.0
 - **`jira-summary` now uses the Atlassian Jira Cloud REST API instead of the browser.** PBS disabled
