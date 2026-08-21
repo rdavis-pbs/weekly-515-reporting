@@ -1,7 +1,7 @@
 ---
 name: run-weekly-515
 description: >
-  Run the full weekly 515 workflow end to end: collect chat, email, calendar, OneNote, git, Jira,
+  Run the full weekly 515 workflow end to end: collect Slack chat, email, calendar, OneNote, git, Jira,
   Claude (Code + chat + Cowork), and Airtable resource-tracker goals for the current work week, then
   roll it all up into a proposed 515 entry. This is
   the one-click Friday driver for the weekly-515-reporting plugin. Use whenever the user says "run
@@ -13,6 +13,11 @@ description: >
 
 This is the single entry point the user triggers each Friday. It runs the collector skills, then the
 roll-up, all against the same work week and output folder.
+
+> **Check for a local playbook first.** If `${CLAUDE_PLUGIN_ROOT}/docs/WEEKLY-RUN-PLAYBOOK.md`
+> exists, read it before doing anything else and follow it where it differs from the steps below.
+> It records which sources actually work in this environment, which are user-pasted, and where the
+> run is meant to pause — details this generic orchestrator can't know.
 
 ## Step 1 — Establish the week and output folder once
 
@@ -26,7 +31,7 @@ Carry out each of these skills in turn, following that skill's own SKILL.md. The
 so a failure or missing connector in one should not stop the others — capture what each produces
 and move on:
 
-1. `chat-summary`  (Slack via Slackbot summary + Teams)
+1. `chat-summary`  (Slack via Slackbot summary — Teams is not a source)
 2. `email-summary`  (Outlook sent + received)
 3. `calendar-summary`  (Outlook events)
 4. `onenote-summary`  (local/OneDrive notes export)

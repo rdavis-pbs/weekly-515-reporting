@@ -25,7 +25,7 @@ on the folder.
 
 | Skill | Source | How it connects | Output file |
 |-------|--------|-----------------|-------------|
-| `chat-summary` | Slack + Teams | Slack via Slackbot summary (browser); Teams via connector | `chat-summary.md` |
+| `chat-summary` | Slack | Slack via Slackbot summary (browser) | `chat-summary.md` |
 | `email-summary` | Outlook mail | Microsoft 365 connector | `email-summary.md` |
 | `calendar-summary` | Outlook calendar | Microsoft 365 connector | `calendar-summary.md` |
 | `onenote-summary` | OneNote notes | SharePoint-hosted notebook via browser (Claude in Chrome) | `onenote-summary.md` |
@@ -37,6 +37,11 @@ on the folder.
 | `run-weekly-515` | — | orchestrates all of the above | — |
 
 Trigger `run-weekly-515` each Friday to do the whole thing, or run any single skill on its own.
+
+If your environment differs from the stock assumptions above — a source you don't use, a browser
+that's locked down, a step you want to pause on — record that once in
+`docs/WEEKLY-RUN-PLAYBOOK.md` and `run-weekly-515` will read it before every run. See
+[docs/WEEKLY-RUN-PLAYBOOK.md](docs/WEEKLY-RUN-PLAYBOOK.md) for the maintainer's own, as an example.
 
 ## Before first use — set these
 
@@ -66,7 +71,7 @@ just run any skill and let first-run setup create it for you.
 
 ## Connectors used
 
-- **Microsoft 365** (Outlook mail, calendar, Teams) — used directly.
+- **Microsoft 365** (Outlook mail, calendar) — used directly.
 - **Airtable** — the **Airtable REST API** with your own personal access token, via
   `scripts/airtable_fetch.py`. Two sources: your 515 records (`AIRTABLE_515_URL`, for the format) and
   optionally your FY goals/tasks (`AIRTABLE_GOALS_URL`, for Next Week's Priorities). Read-only; the

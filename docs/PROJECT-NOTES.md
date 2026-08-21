@@ -43,7 +43,11 @@ folder name.
 
 This was a deliberate design choice, not a limitation to "fix":
 
-- **Microsoft 365 connector** (Outlook mail, calendar, Teams) — used directly. Already connected.
+- **Microsoft 365 connector** (Outlook mail, calendar) — used directly. Already connected.
+- **Microsoft Teams — removed as a source in v0.10.1.** You don't use it. It had been costing every
+  run a Graph `chat_message_search` sweep that then got written up as a coverage gap: 38 of 40 chats
+  on 8/7/2026, then 0 of 38 on 8/14 (HTTP 429). A gap that reads as "chat we failed to capture" when
+  there was never any chat there is worse than no section at all.
 - **GitHub** — read via the **GitHub REST API** with a personal access token, driven by
   `scripts/github_fetch.py`. Switched from the browser in v0.9.0 alongside Jira. Uses the search API
   so it spans every repo at once without enumerating them: commits, PRs opened, PRs merged, PRs
@@ -146,20 +150,19 @@ one won had depended on the shell's working directory.
 
 ## Open items / TODO
 
-- [ ] **Create the Jira API token** and save it as `JIRA_API_TOKEN` in
-      `.weekly-515-reporting/credentials.md`, then verify with `jira_fetch.py --check`. Nothing in
-      `jira-summary` works until this exists. Token creation is confirmed allowed on the PBS
-      Atlassian tenant.
+- [x] **Create the Jira API token.** Done — `JIRA_API_TOKEN` is in `credentials.md` and
+      authenticates as Robert Davis. `JIRA_API_TOKEN_EXPIRES` is tracked so the 8/14/2026
+      mid-week-expiry failure can't repeat silently.
 - [ ] **Reinstall the plugin.** The installed copy is v0.5.0 (`local-desktop-app-uploads`), so none
       of the v0.6.0+ config relocation or the v0.9.0 Jira API work is live yet.
-- [ ] **Create the GitHub token** and save it as `GITHUB_TOKEN` in `credentials.md`, then verify with
-      `github_fetch.py --check`. It needs `repo` scope (classic) or Contents read (fine-grained), or
-      private work stays invisible.
-- [ ] **Claude in Chrome is disabled by PBS policy.** Jira and GitHub are now solved via their REST
-      APIs. Still browser-dependent: `chat-summary` (Slack), `onenote-summary`, and the claude.ai-chat
-      portion of `claude-summary`. Slack and OneNote are to be **pasted in manually** by the user.
-      claude.ai chat has no API, so that portion of `claude-summary` may simply be dropped — the
-      Claude Code half reads local transcripts on disk and is unaffected.
+- [x] **Create the GitHub token.** Done — `GITHUB_TOKEN` authenticates as `rdavis-pbs` and returns
+      private-repo commits, so the scope is sufficient.
+- [x] **Claude in Chrome is disabled by PBS policy.** Settled in v0.10.1 rather than worked around
+      ad hoc each week: the run writes labeled `AWAITING INPUT` stubs for `chat-summary` (Slack) and
+      `onenote-summary`, then **stops before the roll-up** so the user can paste into them. The
+      claude.ai-chat portion of `claude-summary` is marked not-collected rather than dropped, since
+      "unknown" and "no activity" aren't the same claim. The Claude Code half reads local transcripts
+      and is unaffected. Procedure lives in [WEEKLY-RUN-PLAYBOOK.md](WEEKLY-RUN-PLAYBOOK.md).
 - [ ] First real run end-to-end: sanity-check each output file, then tune the summary sections/tone
       to match how you actually write your 515.
 - No auto-run / scheduling — you run this manually. (Decided against a scheduled task.)

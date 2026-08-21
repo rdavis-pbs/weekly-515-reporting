@@ -2,6 +2,30 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.10.1
+- **`chat-summary` now points at the user's saved Slack skill, "Weekly Activity Summary,"** instead
+  of composing a Slackbot prompt each run. The skill already carries the prompt and the week framing,
+  so the ask each Friday is just "run it and paste the result" — and a hand-built prompt would drift
+  from the one the user actually maintains. The generated prompt survives only as a fallback for if
+  the saved skill goes away.
+- **Microsoft Teams is no longer a source.** `chat-summary` is now Slack-only: the Teams connector
+  step is gone, and the skill explicitly says Teams' absence is *not* a gap. The user doesn't use
+  Teams, so every run was spending a Graph `chat_message_search` sweep to produce a section that
+  then reported failure — 38 of 40 chats on 8/7, then 0 of 38 on 8/14 (HTTP 429). A "gap" describing
+  chat that never existed is worse for the roll-up than no section, because it reads as coverage the
+  report failed to get.
+- **New `docs/WEEKLY-RUN-PLAYBOOK.md`, and `run-weekly-515` now reads it first.** The orchestrator
+  is generic by design, but the environment it runs in isn't: two of its eight collectors need
+  Claude in Chrome, which PBS has disabled outright. The playbook records the standing deviations
+  once — Teams isn't a source, Slack and OneNote are user-pasted stubs with a hard checkpoint before
+  the roll-up, `claude-summary` runs the Claude Code surface only, use `python` not `python3` — plus
+  preflight checks, the stub templates, and the roll-up rules drafts keep violating. This replaces
+  re-deriving the workflow from nine SKILL.md files every Friday, and makes the weekly run cheap
+  enough that it isn't worth re-reading the whole plugin to do it.
+- The Slack/OneNote paste-in workaround is now a **defined step with a stop point** rather than
+  something improvised mid-run. A stub that says `AWAITING INPUT` can't be mistaken by a later
+  roll-up for a quiet week, which is the failure the previous ad-hoc approach risked.
+
 ## 0.10.0
 - **`weekly-515-rollup` now reads Airtable through the Airtable REST API.** New bundled script
   `scripts/airtable_fetch.py` (stdlib Python only, same shape as the Jira and GitHub fetchers)
