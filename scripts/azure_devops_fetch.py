@@ -96,7 +96,9 @@ class AzureDevOps(c.HttpClient):
         )
 
     def connection_data(self):
-        return self.request("/_apis/connectionData", params={"api-version": API_VERSION})
+        # Unlike the Git/project endpoints below, connectionData has never graduated out of
+        # preview -- plain "7.1" is rejected with HTTP 400 ("under preview").
+        return self.request("/_apis/connectionData", params={"api-version": "7.1-preview.1"})
 
     def list_projects(self):
         items, token = [], None
