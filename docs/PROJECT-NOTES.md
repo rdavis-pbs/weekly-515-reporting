@@ -92,16 +92,27 @@ This was a deliberate design choice, not a limitation to "fix":
   needs no per-surface registration and behaves identically in Cowork and Claude Code. (An MCP
   server would only pay off if Jira needed to be queried interactively; the fetch code could be
   lifted into one later.)
-- **Airtable goals/tasks** (`AIRTABLE_GOALS_URL`, optional) — the user's own view of the team FY
-  goals table, read by the same script into `<FRIDAY>/airtable-goals.json` and used for Next Week's
-  Priorities. **Selection is by due date and completion, deliberately never by status.** In the real
-  table most near-term rows have a blank `Status` while nearly every row that carries one is already
-  overdue, so the obvious `Status in (To Do, In Progress)` filter returns zero rows and reads as "no
-  upcoming work" — a silent wrong answer rather than an error. Everything not Done/Delivered/Cancelled
-  counts as committed; the script's job is ordering (overdue / due_next_7d / due_within_30d / later /
+- **Airtable goals/tasks** (`AIRTABLE_GOALS_URL`, optional) — the user's own view of the **Tasks**
+  tab of the FY resource-planner base (e.g. "FY27 Resource Planner"; it also has **Goals** and
+  **Metrics** tabs, which aren't fetched directly — each task links to one of each, and the script's
+  existing generic link-field resolution turns those into display names since all three tabs live in
+  the same base). Read into `<FRIDAY>/airtable-goals.json`, used for Next Week's Priorities.
+  **Selection is by due date and completion, deliberately never by status.** In the real table most
+  near-term rows have a blank `Status` while nearly every row that carries one is already overdue, so
+  the obvious `Status in (To Do, In Progress)` filter returns zero rows and reads as "no upcoming
+  work" — a silent wrong answer rather than an error. Everything not Done/Delivered/Cancelled counts
+  as committed; the script's job is ordering (overdue / due_next_7d / due_within_30d / later /
   undated, relative to the anchor Friday), not filtering. Note the bucket names are relative to the
   END of the reporting week, so `due_next_7d` is the week after the report — that's the Next Week's
   Priorities window.
+  - **`Owners` is a multi-person link field, not a single assignee.** Co-ownership with colleagues is
+    normal in this table, unlike the 515 table's single-owner field. The "multiple people in the
+    sample" check that flags an unfiltered 515 view would false-positive here on every run, so it's
+    gated on the assignee field's type: a `multipleRecordLinks` assignee gets an informational note,
+    not the "this view is probably not filtered to you" warning.
+  - **`Record Type`** (`Task`/`Note`/`Gate`/`Decision`) didn't exist in the old FY26 table. A `Note`
+    isn't committed work; a `Gate` is a milestone with its own due date. The skill is told to handle
+    both distinctly rather than reporting every row as an undifferentiated task.
 - **Airtable** — read via the **Airtable REST API** (`scripts/airtable_fetch.py`, `AIRTABLE_API_KEY`),
   same stdlib-script pattern as Jira and GitHub. The roll-up reads the last few 515 records to learn
   the format *and* the table schema, which is the part the connector path never gave us: field types

@@ -1,9 +1,10 @@
 ---
 name: goals-summary
 description: >
-  Summarize the user's committed and upcoming work from their Airtable resource tracker — the FY
-  goals/tasks table (e.g. "Resource Allocation (FY26 Goals)"), which holds activities mapped to
-  department goals — and save it as goals-summary.md in the weekly 515 folder. Reads the Airtable REST
+  Summarize the user's committed and upcoming work from their Airtable resource tracker — the Tasks
+  tab of the FY resource planner base (e.g. "FY27 Resource Planner"), which holds activities linked to
+  department goals and OKR-style metrics — and save it as goals-summary.md in the weekly 515 folder.
+  Reads the Airtable REST
   API with the user's own token; no browser and no Airtable connector required. Use whenever the user
   asks "what's due soon", "what am I committed to", "what's overdue", "summarize my goals/resource
   tracker", wants their FY goals captured for their 515 report, or runs the weekly 515 workflow.
@@ -16,6 +17,15 @@ Capture what the user is formally **on the hook for** — activities mapped to d
 due dates — as raw material for the weekly 515 roll-up and as a standalone answer to "what's coming
 up?". This is the forward-looking counterpart to the other collectors: they report what happened,
 this reports what was committed.
+
+The source base (e.g. "FY27 Resource Planner") has three tabs — **Goals** (the department goal
+taxonomy), **Metrics** (team-wide OKR-style projects under each goal), and **Tasks** (the actual
+action items, with due dates and a personal view). Only **Tasks** is fetched directly —
+`AIRTABLE_GOALS_URL` points there. Each task links to one of each of the other two tabs (`Goal` and
+`Metric` fields), and the fetch script resolves those links to their display names automatically
+since they live in the same base. Goals and Metrics are not reported on their own here; they only
+supply the names behind each task's goal tag. If the user ever wants Goals- or Metrics-level
+reporting on their own, that is a scope change to discuss, not something to infer from this file.
 
 A bundled script, `scripts/airtable_fetch.py`, does the fetching. It talks to the Airtable REST API
 with the user's own personal access token, so it sees exactly what they can see. Your job is to run
@@ -76,8 +86,10 @@ unavailable and why. Don't block the rest of the weekly workflow.
 Read `<FRIDAY>/airtable-goals.json`. Its shape:
 
 - `items[]` — **already sorted by urgency, soonest first.** Each carries `title`, `status`, `start`,
-  `due`, `days_until_due`, `urgency`, `assignee`, and the full `fields{}` (project, FY, customer,
-  priority, linked department goals, JIRA URL).
+  `due`, `days_until_due`, `urgency`, `assignee`, and the full `fields{}` — including `Goal` and
+  `Metric` (the two link fields, already resolved to names — see the two-tier note below),
+  `Record Type` (`Task`/`Note`/`Gate`/`Decision` — see below), `Priority`, `Fiscal Quarter`, and
+  `Owners` (can list co-owners, not just the user — see "shared ownership" below).
 - `urgency` buckets, measured from the reporting week's Friday:
   - `overdue` — past due, not completed.
   - `due_next_7d` — the week *after* the one being reported on.
@@ -95,6 +107,21 @@ status filter of your own. In this table most near-term rows have a **blank** `S
 every row that carries one is already overdue — so `Status in (To Do, In Progress)` returns nothing
 and reads as "no upcoming work", a silent wrong answer. The script excludes only completed items.
 Read a blank status as normal, not as missing data.
+
+### Not every row is a task
+
+`Record Type` is usually `Task`, but can be `Note`, `Gate`, or `Decision`. A `Note` isn't committed
+work — don't report it as an overdue or upcoming task; mention it only if it adds context to a real
+task nearby. A `Gate` is a milestone/checkpoint with its own due date — treat it like a task but call
+it a gate in the write-up rather than implying the user owes a deliverable of that exact name.
+
+### Shared ownership is normal, not a filtering bug
+
+`Owners` is a multi-person link field — a task can list the user alongside colleagues who co-own it.
+Seeing several names across the view does **not** mean the view is unfiltered (unlike the 515 table's
+single-owner field, where that would be a red flag). The fetch script already tells the two cases
+apart in its notes; don't re-raise "this view might not be filtered to you" on your own just because
+multiple names appear.
 
 ### Overdue needs interpretation, not just reporting
 
@@ -136,9 +163,10 @@ Guidance:
 
 - **Keep each item to a line or two.** This is input for a 515, not a project plan. Title, when it's
   due, its goal, and why it matters now.
-- **Carry the goal mapping forward.** Each item's `Department Goals` / `FY Project` /
-  `Guiding Principles` is what makes this source distinctive — it maps activities to goals, which is
-  what the 515's own Goals field needs. State the goal tag per item.
+- **Carry the goal mapping forward.** Each item's `Goal` field is what makes this source distinctive
+  — it maps activities to a department goal, which is what the 515's own Goals field needs. State it
+  per item. `Metric` is a finer-grained OKR tag under that goal; mention it where it adds useful
+  specificity, but `Goal` is the one that matters for the 515's Goals field.
 - **Name stale-looking rows plainly.** If something is overdue by many months with no supporting
   activity, say it looks stale and may need closing out in Airtable. That's more useful than listing
   it as a priority for the fourth week running.
@@ -154,8 +182,8 @@ assigned to anyone other than them (that means the view isn't personal).
 ## How the roll-up uses this
 
 `weekly-515-rollup` reads both this summary and `airtable-goals.json` directly. It uses them for
-**Next Week's Priorities**, and the per-item goal tags help it fill the 515's `#N Goals` field. Those
-tags overlap the 515's own Goals options only **partly** — some match exactly, others are near
+**Next Week's Priorities**, and each item's `Goal` tag helps it fill the 515's `#N Goals` field. That
+tag overlaps the 515's own Goals options only **partly** — some match exactly, others are near
 misses (e.g. a tracker goal of "Change advisory Board (CAB): Enterprise Governance" against a 515
 option of "Enterprise Governance"). Report the tracker's value as it is written and let the roll-up
 map it; don't rewrite it to force a match.

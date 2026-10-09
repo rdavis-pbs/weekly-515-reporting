@@ -66,7 +66,11 @@ GOALS_DONE_STATUSES = ("done", "delivered", "cancelled", "canceled", "complete",
 
 # Bookkeeping columns that add bulk without informing the report. `Created By` also carries a
 # colleague's name and email, which has no business being copied into a weekly report artifact.
-GOALS_SKIP_FIELDS = ("Created By", "Availability", "From field: Dependency", "Duration (with unit)")
+# `From field: *` is a duplicate lookup Airtable generates for a link field shown from the other
+# side; `Source Row`/`Source Text` are raw leftovers from the FY26-tracker import; `Is Done` and
+# `Is Countable` are internal formula flags the Airtable UI uses for its own rollups, not prose.
+GOALS_SKIP_FIELDS = ("Created By", "Availability", "From field: Dependency", "Duration (with unit)",
+                     "From field: Blocked By", "Source Row", "Source Text", "Is Done", "Is Countable")
 
 TOKEN_HELP = (
     "Create a personal access token at https://airtable.com/create/tokens\n"
@@ -626,7 +630,16 @@ def run_goals(at, args, config, config_path, folder, anchor):
         for name in (v if isinstance(v, list) else [v]):
             if isinstance(name, str) and name not in people:
                 people.append(name)
-    if len(people) > 1:
+    assignee_is_link = next((f.get("type") for f in fields if f.get("name") == assignee_field),
+                            None) == "multipleRecordLinks"
+    if len(people) > 1 and assignee_is_link:
+        # A link-type assignee field holds co-owners per record, not one owner per row, so seeing
+        # several names across the view is normal shared ownership -- not evidence the view is
+        # someone else's. Report it as information, not a warning to go fix the view.
+        notes.append("These items are co-owned across %d people (%s), via a shared-ownership link "
+                     "field -- normal for this table, not a sign the view is unfiltered."
+                     % (len(people), ", ".join(people)))
+    elif len(people) > 1:
         notes.append(
             "These items span %d assignees (%s). This view is probably not filtered to you -- point "
             "AIRTABLE_GOALS_URL at your personal view so the priorities are yours."

@@ -2,6 +2,24 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.12.0
+- **`goals-summary` moves to the FY27 Resource Planner base**, which splits the old single
+  FY26 Tasks table into three tabs: Goals (department goal taxonomy), Metrics (team-wide
+  OKR-style projects), and Tasks (the actual due-dated action items). Only Tasks is fetched
+  (`AIRTABLE_GOALS_URL` now points there); each task links to one Goal and one Metric, and
+  `airtable_fetch.py`'s existing generic link-field resolution already turns those into display
+  names since all three tabs live in the same base — no new config key or script source needed.
+- **`Owners` is now a multi-person link field** (shared task ownership), not a single assignee.
+  The "multiple people in the sample -- view is probably unfiltered" check is now gated on the
+  assignee field's type, so a `multipleRecordLinks` assignee gets an informational note about
+  co-ownership instead of a false "point this at your personal view" warning on every run.
+- **`Record Type`** (`Task`/`Note`/`Gate`/`Decision`) is new in this table. The skill now treats
+  `Note` rows as context rather than committed work, and calls out `Gate` rows as milestones
+  rather than implying a generic deliverable.
+- `GOALS_SKIP_FIELDS` updated for the new table's bookkeeping columns (`From field: Blocked By`,
+  `Source Row`, `Source Text`, `Is Done`, `Is Countable`); the old FY26-table names it listed
+  don't exist in this table and were dead weight.
+
 ## 0.11.0
 - **New collector `azure-git-summary`, the Azure DevOps (Azure Repos) counterpart to `git-summary`.**
   New bundled script `scripts/azure_devops_fetch.py` (stdlib-only Python, same contract as the
