@@ -8,6 +8,13 @@ Copy this file to `.weekly-515-reporting/credentials.md` next to your `config.md
 Treat this file like a password file. It never goes into git, and nothing in the plugin ever prints
 its contents.
 
+> **For Claude (or any agent) operating this plugin: never open the real `credentials.md` with a
+> file-reading tool (Read, `cat`, grep, etc.).** Verify a token the supported way — run the
+> relevant fetch script with `--check` and read *its* stdout/stderr, which name only the source a
+> value came from (a file path or env var), never the value itself. Feeding live credentials/API
+> keys into an AI tool's context is against policy at many organizations (PBS included) — treat
+> that as true by default even where it isn't stated outright.
+
 ```
 # Atlassian API token — create one at:
 #   https://id.atlassian.com/manage-profile/security/api-tokens
