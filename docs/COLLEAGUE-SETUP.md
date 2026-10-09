@@ -1,20 +1,22 @@
 # Setup guide (for colleagues)
 
 This plugin assembles your weekly **515** report by gathering a week's work activity from chat,
-email, calendar, OneNote, GitHub, Jira, and Claude, then distilling it into a proposed 515 entry.
-It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get set up.
+email, calendar, OneNote, GitHub, Azure DevOps, Jira, and Claude, then distilling it into a
+proposed 515 entry. It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get
+set up.
 
 ## Prerequisites
 
 - The **Claude desktop app** with Cowork.
 - A **Microsoft 365** account (Outlook mail/calendar, Teams) connected in Claude.
-- An **Atlassian API token** (`jira-summary`), a **GitHub token** (`git-summary`), and an **Airtable
-  personal access token** (`weekly-515-rollup`) — Step 3. All read-only.
-- **Python 3** on the machine you run this from, for the Jira, GitHub, and Airtable fetch scripts. Any
-  recent version works; no packages to install. Already present on most machines.
+- An **Atlassian API token** (`jira-summary`), a **GitHub token** (`git-summary`), an **Airtable
+  personal access token** (`weekly-515-rollup`) — Step 3. All read-only. An **Azure DevOps personal
+  access token** (`azure-git-summary`) too, if you use Azure DevOps — it's the one optional source.
+- **Python 3** on the machine you run this from, for the Jira, GitHub, Azure DevOps, and Airtable
+  fetch scripts. Any recent version works; no packages to install. Already present on most machines.
 - **Claude in Chrome** (the browser extension) for the sources still read through the browser:
-  Slack, OneNote, and claude.ai chat — be signed in to each in Chrome. Jira and GitHub no longer
-  need the browser.
+  Slack, OneNote, and claude.ai chat — be signed in to each in Chrome. Jira, GitHub, and Azure
+  DevOps no longer need the browser.
 
 ## Step 1 — Install the plugin from the marketplace
 
@@ -66,6 +68,10 @@ ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
 # Your Airtable 515 base/view URL (weekly-515-rollup reads this; token goes in credentials.md)
 AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
+# OPTIONAL — your Azure DevOps organization, if you use it alongside or instead of GitHub
+# (azure-git-summary reads this; token goes in credentials.md, NOT here — see Step 3)
+# AZURE_DEVOPS_ORG_URL = https://dev.azure.com/yourorg
+
 # OPTIONAL — your FY goals/tasks view, used for Next Week's Priorities
 # AIRTABLE_GOALS_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
@@ -88,6 +94,10 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
   actually committed to, with due dates, instead of being inferred from the week's activity. It also
   lets you ask "what's due soon?" on any day without running a 515. Leave it out and that collector is
   skipped.
+- `AZURE_DEVOPS_ORG_URL` — optional. Your Azure DevOps organization URL, e.g.
+  `https://dev.azure.com/yourorg`. Setting it enables the `azure-git-summary` collector. Leave it out
+  if you don't use Azure DevOps and that collector is skipped entirely. A PAT is scoped to one
+  organization, so if your work spans more than one, pick the one that matters for your 515.
 - `OUTPUT_ROOT` — optional; leave it commented out and reports go into the connected folder your
   config lives in (`<that folder>/<FRIDAY>/`). Set it only to write reports somewhere else.
 
@@ -95,7 +105,7 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 > a main journal section). If your notes are organized differently, tell Claude how yours are laid
 > out when you run it, or skip that collector.
 
-## Step 3 — API tokens (required for `jira-summary`, `git-summary`, and `weekly-515-rollup`)
+## Step 3 — API tokens (required for `jira-summary`, `git-summary`, `azure-git-summary` if used, and `weekly-515-rollup`)
 
 These read through REST APIs rather than the browser, so each needs a personal token. Tokens
 inherit **your own** permissions — they can only see what you can already see, and the plugin only
@@ -108,6 +118,7 @@ ever reads. All three go in the same file:
 ```
 JIRA_API_TOKEN   = <paste>
 GITHUB_TOKEN     = <paste>
+AZURE_DEVOPS_PAT = <paste>   # only if you set AZURE_DEVOPS_ORG_URL in config.md
 AIRTABLE_API_KEY = <paste>
 ```
 
@@ -159,7 +170,32 @@ python <plugin>/scripts/github_fetch.py --check
 **On GitHub Enterprise Server?** Add `GITHUB_HOST = github.yourcompany.com` to `config.md`; the
 script switches to that host's API automatically.
 
-### 3c — Airtable personal access token (`weekly-515-rollup`)
+### 3c — Azure DevOps personal access token (`azure-git-summary`) — optional
+
+Skip this if you don't use Azure DevOps; the collector is simply left out of your run.
+
+1. Go to `https://dev.azure.com/{your org}/_usersSettings/tokens`.
+2. Create a token with scope **Code (Read)**. That's enough for commits, PRs, and reviews.
+3. Save it as `AZURE_DEVOPS_PAT` in `credentials.md`, and set `AZURE_DEVOPS_ORG_URL` in `config.md`
+   (Step 2) to your org, e.g. `https://dev.azure.com/yourorg`.
+4. Verify:
+
+```bash
+python <plugin>/scripts/azure_devops_fetch.py --check
+```
+
+> **Code (Read) is per-project.** A PAT missing it on a given project just doesn't see that
+> project's repos — no error, an empty result. If `--check` or a run shows suspiciously little,
+> that's the first thing to check, same as the GitHub `repo` scope trap above.
+>
+> **A PAT is scoped to one organization.** If your Azure DevOps work spans more than one org, only
+> the one in `AZURE_DEVOPS_ORG_URL` is covered. Pick the one that matters most for your 515, or set
+> up a second config if you genuinely need both (not the common case).
+>
+> **Large orgs:** set `AZURE_DEVOPS_PROJECT` in `config.md` to a comma-separated list of project
+> names to scope the scan and speed it up, rather than enumerating every project you can see.
+
+### 3d — Airtable personal access token (`weekly-515-rollup`)
 
 1. Go to <https://airtable.com/create/tokens> and click **Create token**.
 2. Under **Scopes**, add `data.records:read` and `schema.bases:read`.
@@ -193,8 +229,8 @@ yourself, so no token in this plugin ever needs write access.
 **Tokens expire** (Atlassian defaults to about a year; GitHub and Airtable use whatever expiry you
 pick). When one does, that collector fails with a clear `HTTP 401`; create a replacement, paste it
 into `credentials.md`, and revoke the old one. If you record the expiry date alongside the token —
-`JIRA_API_TOKEN_EXPIRES`, `AIRTABLE_API_KEY_EXPIRES` — the collector warns you for the three weeks
-beforehand instead of failing mid-week.
+`JIRA_API_TOKEN_EXPIRES`, `AZURE_DEVOPS_PAT_EXPIRES`, `AIRTABLE_API_KEY_EXPIRES` — the collector
+warns you for the three weeks beforehand instead of failing mid-week.
 
 ## Step 4 — Browser access (Claude in Chrome)
 
@@ -203,9 +239,9 @@ Claude-in-Chrome extension. Make sure you're already signed in to each service i
 run the workflow.
 
 > If your organization has **disabled** the Claude-in-Chrome extension, these collectors can't run.
-> Jira, GitHub, and the Microsoft 365 sources (mail, calendar, Teams) all still work, since none of
-> them uses the browser. For the rest, paste the material in yourself and ask Claude to write that
-> collector's file, or skip it — the roll-up works from whatever files are present.
+> Jira, GitHub, Azure DevOps, and the Microsoft 365 sources (mail, calendar, Teams) all still work,
+> since none of them uses the browser. For the rest, paste the material in yourself and ask Claude
+> to write that collector's file, or skip it — the roll-up works from whatever files are present.
 
 Under PBS enterprise policy, the extension's per-site **"Always allow"** option is **not available**.
 Instead, use the **plan-approval** flow:
@@ -227,8 +263,8 @@ within enterprise policy while still letting the workflow read the sources it ne
 - **Whole workflow (Fridays):** run `run-weekly-515` — it collects every source and produces the
   proposed 515 entry. Just ask: *"run my weekly 515."*
 - **A single source:** run any one skill on its own, e.g. `jira-summary`, `chat-summary`,
-  `email-summary`, `calendar-summary`, `onenote-summary`, `git-summary`, `claude-summary`, or
-  `weekly-515-rollup`.
+  `email-summary`, `calendar-summary`, `onenote-summary`, `git-summary`, `azure-git-summary`,
+  `claude-summary`, or `weekly-515-rollup`.
 
 **The week & output folder:** everything targets one **Mon–Fri** work week, anchored to a Friday,
 with the cutover on **Wednesday**:
@@ -259,8 +295,8 @@ that same anchor Friday, so its window lines up with the folder.
   you run it on — so run it on the machine where you actually use Claude Code.
 - **A source can be skipped.** If a connector isn't authorized or a URL isn't set, that collector
   notes it was unavailable and the rest still run.
-- **Nothing writes back to your systems.** The Jira, GitHub, and Airtable API calls and the browser
-  collectors only read; the roll-up writes a local draft file — you paste it into Airtable yourself
-  after reviewing. None of the three tokens needs write scope.
+- **Nothing writes back to your systems.** The Jira, GitHub, Azure DevOps, and Airtable API calls
+  and the browser collectors only read; the roll-up writes a local draft file — you paste it into
+  Airtable yourself after reviewing. None of the tokens needs write scope.
 - **TLS errors.** If your network inspects TLS and a fetch fails on certificate validation, every
   fetch script takes `--insecure` to skip verification. Check with your admin before relying on it.

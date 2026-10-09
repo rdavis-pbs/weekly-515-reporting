@@ -33,6 +33,8 @@ Everything else follows the stock skills unchanged.
 2. **Config completeness.** `config.md` should carry `SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`,
    `JIRA_JQL`, `ONENOTE_URL`, `AIRTABLE_515_URL`, `AIRTABLE_GOALS_URL`, `OUTPUT_ROOT`. List the
    keys with a grep for `^[A-Z_]* *=` — **don't** echo the values into the transcript.
+   `AZURE_DEVOPS_ORG_URL` is not yet set, so `azure-git-summary` is skipped — that's expected until
+   it's added, not a failure to flag.
 3. **Already-run collectors.** `ls <FRIDAY>/` first. Robert sometimes runs `goals-summary`
    mid-week, so the three Airtable artifacts may already exist for this Friday. **Ask** whether to
    reuse or refresh — don't assume either way.
@@ -52,6 +54,7 @@ background in parallel while you do the stub and doc work.
 |---|---|---|
 | `jira-summary` | `python weekly-515-reporting/scripts/jira_fetch.py` | `jira-activity.json` → `jira-summary.md` |
 | `git-summary` | `python weekly-515-reporting/scripts/github_fetch.py` | `github-activity.json` → `git-summary.md` |
+| `azure-git-summary` *(only once `AZURE_DEVOPS_ORG_URL` is set — see preflight)* | `python weekly-515-reporting/scripts/azure_devops_fetch.py` | `azure-git-activity.json` → `azure-git-summary.md` |
 | `email-summary` | M365 MCP `outlook_email_search`, `WEEK_START`→`WEEK_END`; **second pass** with `folderName="Sent Items"`; `read_resource` on decision-bearing threads | `email-summary.md` |
 | `calendar-summary` | M365 MCP `outlook_calendar_search`, `order="oldest"`; `read_resource` per event for agenda/attendees/`meetingTranscriptUrl` | `calendar-summary.md` |
 
@@ -59,7 +62,7 @@ background in parallel while you do the stub and doc work.
 `python`), then write the file with the two browser surfaces marked not-collected.
 
 **Windows differ on purpose.** Jira is **Fri→Fri** (7 days, ending on the anchor Friday); GitHub,
-email, calendar and Claude Code are **Mon–Fri**. This is deliberate — Robert's Jira reporting
+Azure DevOps, email, calendar and Claude Code are **Mon–Fri**. This is deliberate — Robert's Jira reporting
 period is Fri→Fri. If you ever change the anchor rule, change it in *both* `shared/work-week.md`
 and `scripts/jira_fetch.py` or the Jira window and the output folder drift apart.
 
@@ -151,8 +154,11 @@ From `weekly-515-rollup/SKILL.md`, repeated here because these are the ones that
 
 1. `ls <FRIDAY>/` — expect `jira-summary.md` + `jira-activity.json`, `git-summary.md` +
    `github-activity.json`, `email-summary.md`, `calendar-summary.md`, `claude-summary.md`, the two
-   stubs, and the three Airtable/goals artifacts. Compare against the previous week's folder.
-2. Confirm the window inside `jira-activity.json` is Fri→Fri and GitHub's is Mon–Fri.
+   stubs, and the three Airtable/goals artifacts (plus `azure-git-summary.md` +
+   `azure-git-activity.json` once `AZURE_DEVOPS_ORG_URL` is configured). Compare against the
+   previous week's folder.
+2. Confirm the window inside `jira-activity.json` is Fri→Fri and GitHub's (and Azure DevOps', once
+   configured) is Mon–Fri.
 3. Every `*-summary.md` opens with `# … — week of <LABEL>` and an italic `_Source: …_` line.
 4. Both stubs still say `AWAITING INPUT`, and nothing in the folder claims missing Teams coverage.
 5. After the roll-up: `proposed 515 accomplishments.md` mirrors the field structure in

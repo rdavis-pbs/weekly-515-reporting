@@ -29,6 +29,18 @@ JIRA_API_TOKEN_EXPIRES = <YYYY-MM-DD>
 # weekly summary silently shows only your public work, which usually looks like "no activity."
 GITHUB_TOKEN = <paste your token here>
 
+# Azure DevOps personal access token — create one at:
+#   https://dev.azure.com/{org}/_usersSettings/tokens
+# Scope: Code (Read) is enough for commits, PRs, and reviews. It inherits your own project
+# permissions, so a PAT missing Code (Read) on a project simply doesn't see that project's repos —
+# there's no error, just an empty result, which can look like "no activity" if you don't know to
+# check scope.
+AZURE_DEVOPS_PAT = <paste your token here>
+
+# Optional but recommended: the expiry date you chose above, as YYYY-MM-DD. Same silent-lapse
+# warning as the other tokens below.
+AZURE_DEVOPS_PAT_EXPIRES = <YYYY-MM-DD>
+
 # Airtable personal access token — create one at https://airtable.com/create/tokens
 #   Scopes: `data.records:read` and `schema.bases:read`.
 #   Access: add the base your 515 tracker lives in (the app... id in AIRTABLE_515_URL).
@@ -46,8 +58,9 @@ AIRTABLE_API_KEY_EXPIRES = <YYYY-MM-DD>
 
 ## Alternatives to this file
 
-All three fetch scripts resolve their token in this order, first hit wins (`JIRA_API_TOKEN` for
-`jira_fetch.py`, `GITHUB_TOKEN` for `github_fetch.py`, `AIRTABLE_API_KEY` for `airtable_fetch.py`):
+All fetch scripts resolve their token in this order, first hit wins (`JIRA_API_TOKEN` for
+`jira_fetch.py`, `GITHUB_TOKEN` for `github_fetch.py`, `AZURE_DEVOPS_PAT` for
+`azure_devops_fetch.py`, `AIRTABLE_API_KEY` for `airtable_fetch.py`):
 
 1. The environment variable of that name.
 2. The key in this file.

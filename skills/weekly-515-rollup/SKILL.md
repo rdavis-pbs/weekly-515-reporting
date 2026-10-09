@@ -3,8 +3,9 @@ name: weekly-515-rollup
 description: >
   Build the proposed weekly 515 entry: read the user's last few 515 records and their table's field
   structure, plus their committed and upcoming FY goals/tasks, from the Airtable REST API with the
-  user's own token, then distill this week's collected summaries (chat, email, calendar, OneNote, git,
-  Jira, Claude) into that same Airtable format, saving it as "proposed 515 accomplishments.md" in the
+  user's own token, then distill this week's collected summaries (chat, email, calendar, OneNote,
+  GitHub and Azure DevOps git activity, Jira, Claude) into that same Airtable format, saving it as
+  "proposed 515 accomplishments.md" in the
   weekly 515 folder and notifying the user. Use whenever the user wants to draft/prepare their 515
   entry, asks to "roll up my week", "draft my 515", "prepare my weekly Airtable update", "what's due
   soon", or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
@@ -149,9 +150,10 @@ draft's header note that the format could not be confirmed live.
 
 Read every file present in the `<FRIDAY>` folder:
 `chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `onenote-summary.md`,
-`git-summary.md`, `jira-summary.md`, `claude-summary.md`, `goals-summary.md`. Some may be missing if a
-source had no activity or wasn't run — that's fine; work with what's there and note which sources were
-unavailable.
+`git-summary.md`, `azure-git-summary.md`, `jira-summary.md`, `claude-summary.md`, `goals-summary.md`.
+Some may be missing if a source had no activity or wasn't run — that's fine; work with what's there
+and note which sources were unavailable. `azure-git-summary.md` in particular is expected to be
+absent for users who don't use Azure DevOps — that's a config choice, not a gap.
 
 The goals items from Step 2b often carry a `JIRA` URL — use it to tie a committed item to the ticket
 activity in `jira-summary.md`, which is the strongest available evidence that the item actually moved

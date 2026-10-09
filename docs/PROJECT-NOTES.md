@@ -6,11 +6,13 @@ conversation isn't available.
 
 ## What this plugin does
 
-Assembles your weekly **515** report. Eight collector skills each summarize one source for the week
+Assembles your weekly **515** report. Nine collector skills each summarize one source for the week
 and drop a markdown file into a dated folder; a roll-up skill then distills all of them into a
 proposed 515 entry that matches the existing Airtable format. `run-weekly-515` runs the whole chain.
+`azure-git-summary` is optional — skipped entirely if `AZURE_DEVOPS_ORG_URL` isn't set, for users
+who only use GitHub.
 
-Seven collectors look **backward** (what happened). `goals-summary` is the one that looks
+Eight collectors look **backward** (what happened). `goals-summary` is the one that looks
 **forward** — the Airtable resource tracker holds committed activities mapped to department goals,
 which is what Next Week's Priorities needs and what no amount of reading this week's chatter can
 reliably produce.
@@ -59,6 +61,25 @@ This was a deliberate design choice, not a limitation to "fix":
     still authenticate fine and return *zero* results for a week of private-repo work. That's a
     silent wrong answer, not an error, so both the script and the skill call it out explicitly
     whenever counts come back empty.
+- **Azure DevOps (Azure Repos) — added as a GitHub counterpart, optional.** Read via the **Azure
+  DevOps REST API** with a personal access token (Code: Read), driven by
+  `scripts/azure_devops_fetch.py`, same contract as the GitHub/Jira scripts. Skipped entirely if
+  `AZURE_DEVOPS_ORG_URL` isn't set, since not everyone uses it. Enumerates every project (or just
+  `AZURE_DEVOPS_PROJECT`, if set) and every repo in each: commits authored, PRs created, PRs
+  completed, PRs reviewed.
+  - **No per-vote timestamp exists in the API.** Unlike GitHub's PR reviews, an Azure DevOps
+    reviewer's vote has no timestamp of its own — the vote is just a field on the PR's current
+    state. The script approximates "reviewed in this window" from the user's own thread comments
+    when any exist, and falls back to the PR's created/closed dates (flagged
+    `vote_date_is_approximate`) when there's no comment to pin it to. This is a real API gap, not a
+    bug to "fix" by polling harder.
+  - **A PAT is scoped to one organization.** If work spans multiple Azure DevOps orgs, only the one
+    in `AZURE_DEVOPS_ORG_URL` is covered — same shape of limitation as GitHub Enterprise Server's
+    `GITHUB_HOST` being one host at a time.
+  - **Commit-author matching needs an email**, normally read from the Azure DevOps profile API
+    (`vssps.dev.azure.com/{org}/_apis/profile/profiles/me`) — which only exists on Azure DevOps
+    Services (cloud), not reliably on an on-prem Server. `AZURE_DEVOPS_EMAIL` is the escape hatch,
+    same idea as `JIRA_EMAIL`.
 - **Slack** — uses Slackbot's built-in weekly summary read through the browser (Claude in Chrome),
   NOT the Slack connector. Reason: the Slack connector requires enumerating every chat to access,
   which you didn't want. Slackbot's own recap already covers the workspace.
@@ -113,27 +134,30 @@ template). Skills read them from there by key.
 | `JIRA_JQL` | `jira-summary` | *optional* — JQL with `{start}`/`{end}` placeholders |
 | `GITHUB_USER` | `git-summary` | *optional* — defaults to the token's own account |
 | `GITHUB_HOST` | `git-summary` | *optional* — only for GitHub Enterprise Server |
+| `AZURE_DEVOPS_ORG_URL` | `azure-git-summary` | *optional* — unset skips the collector entirely |
+| `AZURE_DEVOPS_PROJECT` | `azure-git-summary` | *optional* — comma-separated project names to scope to |
+| `AZURE_DEVOPS_EMAIL` | `azure-git-summary` | *optional* — only if profile email resolution fails |
 | `ONENOTE_URL` | `onenote-summary` | your SharePoint Doc.aspx notebook URL |
 | `AIRTABLE_515_URL` | `weekly-515-rollup` | your 515 base/view URL |
 | `OUTPUT_ROOT` | `shared/work-week.md` | *optional* — defaults to the config's own folder |
 
 Secrets live in a sibling file, `<workspace>/.weekly-515-reporting/credentials.md`, holding
-`JIRA_API_TOKEN` and `GITHUB_TOKEN`. Splitting them keeps `config.md` safe to share or paste when
-debugging.
+`JIRA_API_TOKEN`, `GITHUB_TOKEN`, and `AZURE_DEVOPS_PAT`. Splitting them keeps `config.md` safe to
+share or paste when debugging.
 
 ## Fetch scripts (`scripts/`)
 
-`jira_fetch.py` and `github_fetch.py` are standalone, stdlib-only CLIs. Deliberately **not** MCP
-servers: a script needs no per-surface registration and behaves identically in Cowork and Claude
-Code. (An MCP server would only pay off if these needed interactive querying; the fetch code could be
-lifted into one later.)
+`jira_fetch.py`, `github_fetch.py`, and `azure_devops_fetch.py` are standalone, stdlib-only CLIs.
+Deliberately **not** MCP servers: a script needs no per-surface registration and behaves identically
+in Cowork and Claude Code. (An MCP server would only pay off if these needed interactive querying;
+the fetch code could be lifted into one later.)
 
 Shared logic lives in `scripts/_common.py` — config discovery, `KEY = value` parsing, secret
 resolution, the week-anchor rule, and the retrying HTTP client. **`anchor_friday()` there is the only
 Python copy of the week rule**; it mirrors the shell snippet in `shared/work-week.md`, and those two
 are the pair to keep in sync.
 
-Both scripts follow the same contract, so a third source can copy the pattern:
+All of them follow the same contract, so a new source can copy the pattern:
 
 - Resolve config → resolve token → compute window → fetch → **filter to what the user personally did
   inside the window** → write `<FRIDAY>/<source>-activity.json` → print a human digest to stdout.
@@ -165,6 +189,10 @@ one won had depended on the shell's working directory.
       and is unaffected. Procedure lives in [WEEKLY-RUN-PLAYBOOK.md](WEEKLY-RUN-PLAYBOOK.md).
 - [ ] First real run end-to-end: sanity-check each output file, then tune the summary sections/tone
       to match how you actually write your 515.
+- [ ] **Create the Azure DevOps PAT**, if you use Azure DevOps — `AZURE_DEVOPS_ORG_URL` in
+      `config.md`, `AZURE_DEVOPS_PAT` in `credentials.md`, then `python
+      weekly-515-reporting/scripts/azure_devops_fetch.py --check`. Not done yet, so
+      `azure-git-summary` is currently skipped on every run.
 - No auto-run / scheduling — you run this manually. (Decided against a scheduled task.)
 
 ## Repo / release workflow

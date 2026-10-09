@@ -2,6 +2,29 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.11.0
+- **New collector `azure-git-summary`, the Azure DevOps (Azure Repos) counterpart to `git-summary`.**
+  New bundled script `scripts/azure_devops_fetch.py` (stdlib-only Python, same contract as the
+  Jira/GitHub/Airtable fetchers) authenticates with a personal access token, enumerates every
+  project and repo the token can see (or just `AZURE_DEVOPS_PROJECT`, if set), and returns three
+  buckets: commits authored, PRs created (split into opened/completed by status and date), and PRs
+  reviewed. Writes `<FRIDAY>/azure-git-activity.json` for the skill to summarize into
+  `azure-git-summary.md`. Wired into `run-weekly-515` and read by `weekly-515-rollup`.
+- **Entirely optional, unlike the other git source.** Skipped outright if `AZURE_DEVOPS_ORG_URL`
+  isn't set in `config.md` — GitHub-only users see no change. New credential `AZURE_DEVOPS_PAT`
+  (plus optional `AZURE_DEVOPS_PAT_EXPIRES`); new optional config keys `AZURE_DEVOPS_PROJECT` (scope
+  to specific projects) and `AZURE_DEVOPS_EMAIL` (override commit-author email resolution).
+- **PR review timestamps are approximated, and the script says so.** Unlike GitHub's review
+  objects, Azure DevOps' PR reviewer `vote` field carries no timestamp of its own. The script pins
+  a review to the window using the user's own thread comments when any exist; absent a comment, it
+  falls back to the PR's created/closed date and marks the entry `vote_date_is_approximate` so the
+  skill reports it more loosely rather than asserting an exact day.
+- Same scope trap as GitHub, called out in both the script and the skill: a PAT missing **Code
+  (Read)** on a project authenticates fine and silently sees nothing in that project — not an
+  error, just an empty result that can read as "no activity."
+- A PAT is scoped to one Azure DevOps organization; if work spans more than one, only the one in
+  `AZURE_DEVOPS_ORG_URL` is covered, and the skill says so rather than reporting the others as idle.
+
 ## 0.10.1
 - **`chat-summary` now points at the user's saved Slack skill, "Weekly Activity Summary,"** instead
   of composing a Slackbot prompt each run. The skill already carries the prompt and the week framing,

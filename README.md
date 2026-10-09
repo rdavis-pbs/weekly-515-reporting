@@ -30,6 +30,7 @@ on the folder.
 | `calendar-summary` | Outlook calendar | Microsoft 365 connector | `calendar-summary.md` |
 | `onenote-summary` | OneNote notes | SharePoint-hosted notebook via browser (Claude in Chrome) | `onenote-summary.md` |
 | `git-summary` | GitHub | **GitHub REST API** via your own token (`scripts/github_fetch.py`) | `git-summary.md` |
+| `azure-git-summary` | Azure DevOps (Azure Repos) | **Azure DevOps REST API** via your own PAT (`scripts/azure_devops_fetch.py`) | `azure-git-summary.md` |
 | `jira-summary` | Jira | **Atlassian REST API** via your own API token (`scripts/jira_fetch.py`) | `jira-summary.md` |
 | `claude-summary` | Claude Code + claude.ai chat + Cowork | Local transcripts on disk; chat via browser; Cowork via desktop app | `claude-summary.md` |
 | `goals-summary` | Airtable resource tracker (FY goals/tasks) | **Airtable REST API** via your own token (`scripts/airtable_fetch.py --source goals`) | `goals-summary.md` |
@@ -60,6 +61,10 @@ just run any skill and let first-run setup create it for you.
 - `AIRTABLE_515_URL` — your 515 base/view URL (used by `weekly-515-rollup`).
 - `GITHUB_USER` / `GITHUB_HOST` — *optional.* Defaults to the token's own account on github.com; set
   `GITHUB_HOST` only for GitHub Enterprise Server.
+- `AZURE_DEVOPS_ORG_URL` — your Azure DevOps organization URL (used by `azure-git-summary`). Leave
+  the plugin's whole Azure DevOps setup out if you don't use it — that collector is simply skipped.
+- `AZURE_DEVOPS_PROJECT` / `AZURE_DEVOPS_EMAIL` — *optional.* Scope the scan to specific projects, or
+  override the account email used to match commit authorship.
 - `OUTPUT_ROOT` — *optional.* Reports default to the connected folder; set this only to write them elsewhere.
 
 **API tokens** go in `.weekly-515-reporting/credentials.md` (template:
@@ -68,6 +73,8 @@ just run any skill and let first-run setup create it for you.
 - `JIRA_API_TOKEN` — <https://id.atlassian.com/manage-profile/security/api-tokens>
 - `GITHUB_TOKEN` — <https://github.com/settings/tokens> (needs `repo` on a classic token, or
   read-only Contents/Pull-requests/Issues/Metadata on a fine-grained one, to see private repos)
+- `AZURE_DEVOPS_PAT` — `https://dev.azure.com/{org}/_usersSettings/tokens` (needs **Code (Read)**;
+  scoped to one organization)
 
 ## Connectors used
 
@@ -78,7 +85,9 @@ just run any skill and let first-run setup create it for you.
   Airtable connector and the browser remain as fallbacks for the 515 read.
 - **Jira** — the **Atlassian REST API** with your own API token, via `scripts/jira_fetch.py`.
 - **GitHub** — the **GitHub REST API** with your own token, via `scripts/github_fetch.py`.
-  All three fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
+- **Azure DevOps** — the **Azure DevOps REST API** with your own personal access token, via
+  `scripts/azure_devops_fetch.py`. Optional: skipped entirely if `AZURE_DEVOPS_ORG_URL` isn't set.
+  All fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
 - **Slack**, **OneNote**, **claude.ai chat** — accessed through the browser (Claude in Chrome), so no
   connector auth is required; just be signed in to each in Chrome. If your organization has disabled
   the extension, these collectors can't run — paste the material in yourself, or skip them; the

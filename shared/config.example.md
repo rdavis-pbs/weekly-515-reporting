@@ -60,6 +60,20 @@ AIRTABLE_515_URL = <your 515 base/view URL, e.g. https://airtable.com/appXXXX/tb
 # OPTIONAL. Only for GitHub Enterprise Server. Defaults to github.com.
 # GITHUB_HOST    = <your GitHub host, e.g. github.mycompany.com>
 
+# --- Azure DevOps (azure-git-summary reads these via the Azure DevOps REST API) ---
+# Your Azure DevOps organization URL. A PAT is scoped to one org, so only this org is covered —
+# if your work spans more than one, pick the one that matters most for your 515.
+AZURE_DEVOPS_ORG_URL = <your org URL, e.g. https://dev.azure.com/yourorg>
+
+# OPTIONAL. Comma-separated project names to scope the scan to. Omit to scan every project the
+# PAT can see (slower on a large org, but nothing is missed by a typo'd project name).
+# AZURE_DEVOPS_PROJECT = <YourProject>, <AnotherProject>
+
+# OPTIONAL. Your account email, used to match Git commit authorship. Normally read automatically
+# from your Azure DevOps profile — set this only if the script reports it couldn't resolve one
+# (common on an on-prem Azure DevOps Server).
+# AZURE_DEVOPS_EMAIL = <the email on your Azure DevOps account, e.g. you@example.com>
+
 # OPTIONAL. By default reports are written into the same folder as this config (the folder you
 # connected). Set OUTPUT_ROOT only if you want them written somewhere else.
 # OUTPUT_ROOT    = <an absolute folder path, e.g. C:\Users\you\Claude\Projects\515 weekly reports>

@@ -1,9 +1,9 @@
 ---
 name: run-weekly-515
 description: >
-  Run the full weekly 515 workflow end to end: collect Slack chat, email, calendar, OneNote, git, Jira,
-  Claude (Code + chat + Cowork), and Airtable resource-tracker goals for the current work week, then
-  roll it all up into a proposed 515 entry. This is
+  Run the full weekly 515 workflow end to end: collect Slack chat, email, calendar, OneNote, GitHub
+  and Azure DevOps git activity, Jira, Claude (Code + chat + Cowork), and Airtable resource-tracker
+  goals for the current work week, then roll it all up into a proposed 515 entry. This is
   the one-click Friday driver for the weekly-515-reporting plugin. Use whenever the user says "run
   my weekly 515", "do my 515", "prep my weekly report", "it's Friday, do my 515", or wants the
   whole weekly report workflow done at once.
@@ -36,9 +36,10 @@ and move on:
 3. `calendar-summary`  (Outlook events)
 4. `onenote-summary`  (local/OneDrive notes export)
 5. `git-summary`  (GitHub via the REST API — no browser)
-6. `jira-summary`  (Jira via the Atlassian REST API — no browser)
-7. `claude-summary`  (Claude Code local sessions + claude.ai chat via browser + Cowork via desktop app)
-8. `goals-summary`  (Airtable resource tracker via the REST API — committed/upcoming work)
+6. `azure-git-summary`  (Azure DevOps Git via the REST API — no browser; skip if the user doesn't use Azure DevOps)
+7. `jira-summary`  (Jira via the Atlassian REST API — no browser)
+8. `claude-summary`  (Claude Code local sessions + claude.ai chat via browser + Cowork via desktop app)
+9. `goals-summary`  (Airtable resource tracker via the REST API — committed/upcoming work)
 
 Each writes one file into the `<FRIDAY>` folder. Keep a running note of which succeeded and which
 were skipped (source empty, connector not authorized, or config like a filter/notes path not set).
