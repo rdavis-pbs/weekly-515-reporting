@@ -6,16 +6,19 @@ Jira, and Claude — then distilling it into a proposed 515 entry. It runs in th
 app (Cowork)**. Follow these steps once to get set up.
 
 > **If you use Claude Code and want that session history in your 515, run from Code, not
-> Cowork — but know the tradeoff.** Cowork tasks execute in a separate sandboxed, ephemeral home
-> directory, so the `claude-summary` collector can't see your real `~/.claude/projects/`
+> Cowork — but you'll need to run twice.** Cowork tasks execute in a separate sandboxed, ephemeral
+> home directory, so the `claude-summary` collector can't see your real `~/.claude/projects/`
 > transcripts from inside a Cowork task — only from a genuine Claude Code session (the CLI, the
 > VS Code/JetBrains extension, or the desktop app's own **Code** surface). Jira, GitHub, Azure
 > DevOps, and Airtable work the same either way (plain REST API calls, no connector). **Microsoft
-> 365 is where it gets uneven: the VS Code extension has no Connectors UI at all**, so
-> `email-summary`/`calendar-summary` can't run from that surface — you'd paste those in manually
-> instead, the same way Slack and personal notes already work. Whether the desktop app's own Code
-> surface keeps Microsoft 365 connected (since it's the same app as Cowork) isn't confirmed yet —
-> if you try it, that's worth telling us either way. See Step 5 for more.
+> 365 is where it gets uneven, and there's no way around it: no Claude Code surface has it.**
+> Confirmed by a colleague — not just the VS Code/JetBrains extensions, but the desktop app's own
+> **Code** surface too, even though it's the same app as Cowork. So there's no single surface that
+> gets you both Claude Code history and automatic email/calendar. The practical fix: **run the
+> workflow from Code** for everything except email/calendar, **then run `email-summary` and
+> `calendar-summary` separately from Cowork/Claude Desktop** and paste their results into the same
+> `<FRIDAY>/` folder before the roll-up — the same manual-paste pattern Slack and personal notes
+> already use. See Step 5 for the exact steps.
 
 **Every source is optional except Airtable.** Nobody has to set up all of them — different people
 rely on different tools. Set up only the sources that apply to you; anything you skip is left out
@@ -30,9 +33,10 @@ yet, so you always know what's included.
   requirement**; without it there's no 515 format to draft into. Everything else below is only
   needed for the specific sources you want captured.
 - A **Microsoft 365** account (Outlook mail/calendar) connected in Claude — only if you want
-  `email-summary`/`calendar-summary`. The connector shows up in Cowork and Claude Desktop; the
-  VS Code/JetBrains Claude Code extensions have no Connectors UI, so running from one of those
-  means pasting email/calendar in manually instead — see the note below.
+  `email-summary`/`calendar-summary`. The connector works in **Cowork**; **no Claude Code surface
+  has it** (confirmed — not the VS Code/JetBrains extensions, and not the desktop app's own Code
+  surface either), so running the plugin from Code means pasting email/calendar in manually
+  instead — see the note below.
 - An **Atlassian API token** (`jira-summary`) — only if you use Jira.
 - A **GitHub token** (`git-summary`) — only if you use GitHub.
 - An **Azure DevOps personal access token** (`azure-git-summary`) — only if you use Azure DevOps.
@@ -45,13 +49,26 @@ yet, so you always know what's included.
 
 ## Step 1 — Install the plugin from the marketplace
 
+This is **two separate actions**, not one — adding the marketplace only tells Claude *where* to
+look; it does not install anything by itself. A colleague stopped after adding the marketplace and
+assumed they were done, then found none of the skills below existed. Don't skip part B.
+
+**Part A — add the marketplace (a source, not the plugin):**
+
 1. In the desktop app: **Customize → Plugins → Add marketplace**.
 2. Enter: `rdavis-pbs/weekly-515-reporting` (or the full URL
    `https://github.com/rdavis-pbs/weekly-515-reporting`).
 3. Leave **Sync automatically** on, then **Sync**.
-4. Find **weekly-515-reporting** in the plugin list and click **Install**.
 
-With auto-sync on, you'll pick up new versions automatically as they're published.
+At this point you've only registered the marketplace — the plugin itself is **not** installed yet.
+
+**Part B — install the plugin itself (a separate, required click):**
+
+4. Find **weekly-515-reporting** in the plugin list that now appears and click **Install**.
+
+Only after Part B will the plugin's skills (`run-weekly-515`, `chat-summary`, etc.) actually be
+available to use. With auto-sync on, you'll pick up new versions automatically as they're
+published — you won't need to repeat either part for updates, only for the first install.
 
 ## Step 2 — Connect a folder and create your config (required)
 
@@ -67,16 +84,34 @@ plugin folder is a cache that gets replaced), **and** it survives Cowork session
 session gets a fresh, throwaway home directory — anything stored there is gone next time). A
 connected folder is the one place that persists.
 
+**Use a brand-new, dedicated folder — not an existing one like your whole Documents folder.**
+Connecting a folder gives Claude read/write reach over everything in it, so the right size is "just
+this plugin's config and reports," not "everything I own." A colleague connected their entire
+Documents folder when first prompted, which was far broader than intended.
+
 Set it up once:
 
-1. **Connect a folder** to Cowork — pick (or make) a folder to hold your 515 config and reports,
-   e.g. a `515 weekly reports` folder. This is a manual step in the Cowork UI; Claude can't connect
-   a folder for you.
-2. **Create the config.** Easiest: just run any skill (see Step 4) — first-run setup will ask which
+1. **Create a new, empty folder first**, before you connect anything — e.g.
+   `Documents\515 weekly reports` (Windows) or `~/Documents/515 weekly reports` (macOS). It should
+   contain nothing but this plugin's config and its weekly output; don't reuse a folder that
+   already holds unrelated files.
+2. **Connect *that* folder** to Cowork (not Documents itself, not your whole home directory). This
+   is a manual step in the Cowork UI — Claude can't connect a folder for you. In the desktop app,
+   look for a folder/connector picker (often prompted automatically the first time a skill needs
+   one, or reachable from Cowork's own settings) and point it at the new folder from step 1.
+   - **If you're prompted mid-run** ("this task needs a folder" or similar) rather than doing this
+     ahead of time, the same rule applies: browse to and select the new dedicated folder, not a
+     convenient broad one like Documents or Desktop.
+   - **If you already connected something too broad,** disconnect it and reconnect the narrower
+     folder instead: look in the desktop app's folder/connector settings (near where you connected
+     it) for a way to remove or disconnect that folder, then repeat this step with the new one.
+     Any `.weekly-515-reporting/config.md` or `<FRIDAY>/` output already written under the old
+     connection should be moved into the new folder so the plugin keeps finding it.
+3. **Create the config.** Easiest: just run any skill (see Step 5) — first-run setup will ask which
    connected folder to use, create `.weekly-515-reporting/config.md` there, and prompt you for the
    values. Or copy the template `shared/config.example.md` into
    `<your folder>/.weekly-515-reporting/config.md` yourself.
-3. Fill in **your own** values:
+4. Fill in **your own** values:
 
 Every key below is **optional** except `AIRTABLE_515_URL` — only fill in the ones for sources you
 actually use. Leaving the rest commented out just means that collector is skipped.
@@ -86,10 +121,18 @@ actually use. Leaving the rest commented out just means that collector is skippe
 # recap skill and paste the result). Omit it entirely if you don't use Slack.
 SLACK_URL        = https://app.slack.com/client/TXXXXXXXX/CXXXXXXXX
 
-# OPTIONAL, both keys. Your Atlassian site and account email (jira-summary reads these; the token
-# goes in credentials.md, NOT here — see Step 3). Omit both if you don't use Jira.
-JIRA_SITE        = yourorg.atlassian.net
+# JIRA_SITE is pre-filled below since everyone on this plugin is at PBS, on the same Jira site —
+# you shouldn't need to change it. JIRA_EMAIL is what actually turns Jira collection on: leave it
+# as the placeholder (or delete the line) if you don't use Jira, and jira-summary is skipped. Set
+# it to your real Atlassian account email to opt in. The token itself goes in credentials.md, NOT
+# here — see Step 3.
+JIRA_SITE        = pbsdistribution.atlassian.net
 JIRA_EMAIL       = you@example.com
+
+# JIRA_JQL is on by default (not commented out) -- it's the standard "issues I updated this
+# window" query, with your email and the week's dates filled in automatically each run. Leave it
+# as-is unless you want to scope it differently; see the OPTIONAL note further down for how.
+JIRA_JQL         = issuekey in updatedBy("{email}", "{start}", "{end}") order by updatedDate desc
 
 # OPTIONAL, both keys. Personal notes, any tool — OneNote, Notepad, Word, a notebook, whatever you
 # actually use (notes-summary reads these). NOTES_LOCATION is just free text to make the paste
@@ -115,9 +158,12 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
 **Where to find each value**
 - `SLACK_URL` — open Slack in the browser and copy the URL of your workspace/home.
-- `JIRA_SITE` — the host part of any Jira URL, e.g. `yourorg.atlassian.net`.
-- `JIRA_EMAIL` — the email address on your Atlassian account (must be the account that creates the
-  API token in Step 3).
+- `JIRA_SITE` — already filled in correctly for everyone at PBS; only change it if you're on a
+  different Atlassian site than `pbsdistribution.atlassian.net`.
+- `JIRA_EMAIL` — **this is what turns Jira collection on.** Set it to the email address on your
+  Atlassian account (must be the account that creates the API token in Step 3). Leave it as the
+  placeholder, or remove the line, and `jira-summary` is skipped — `JIRA_SITE` being pre-filled
+  doesn't opt you in by itself.
 - `NOTES_LOCATION` / `NOTES_URL` — optional. A short reminder of where you keep notes (free text),
   and, only if applicable, a browser-openable URL for them. See Step 4 for why most people at PBS
   leave `NOTES_URL` unset.
@@ -161,11 +207,29 @@ separate from `config.md` so your config remains safe to share.
 
 ### 3a — Atlassian API token (Jira)
 
+Atlassian's token page offers **two different things** — pick the first one, not the second:
+
+- **"Create API token"** (no scopes, sometimes called a *classic* token) — **use this one.** It
+  authenticates with your email + token directly against `https://yourorg.atlassian.net/...`,
+  which is exactly how `jira_fetch.py` talks to Jira.
+- **"Create API token with scopes"** (a *scoped*/granular token) — **don't use this for this
+  plugin.** Scoped tokens only work through a different URL, `api.atlassian.com/ex/jira/{your
+  cloud id}/...`, not your site's own domain — `jira_fetch.py` doesn't call that gateway, so a
+  scoped token fails here (typically a 401) even with every relevant scope selected. This isn't a
+  missing-permission problem; it's the wrong kind of token for how this script talks to Jira.
+
 1. Go to <https://id.atlassian.com/manage-profile/security/api-tokens>.
-2. Click **Create API token**, name it something like `weekly-515-reporting`, and **copy the value
-   immediately** — Atlassian shows it only once. (A scoped token also works if you prefer; it needs
-   `read:jira-work` and `read:jira-user`.)
+2. Click **Create API token** (plain, no scopes), name it something like `weekly-515-reporting`,
+   and **copy the value immediately** — Atlassian shows it only once.
 3. Save it as `JIRA_API_TOKEN` in `credentials.md`.
+
+**On needing to read issues, comments, and attachments:** a classic token has no scope picker at
+all — there's nothing to select. It simply authenticates as *you*, so it can read (and, for that
+matter, write) anything your own Jira account can already see in the UI: issues, comments,
+attachments, worklogs, all of it, across every project you have access to. `jira_fetch.py` itself
+only reads issues, their comment text, and their field-change history (the changelog) — it never
+downloads attachment files — but since the token's access is just "whatever you can see," there's
+no separate attachments permission to grant either way.
 4. Verify — ask Claude to *"check my Jira connection"*, or run the check mode directly:
 
 ```bash
@@ -174,14 +238,11 @@ python <plugin>/scripts/jira_fetch.py --check
 
 That confirms authentication and the query, prints how many issues matched, and writes nothing.
 
-**Optional — customize which issues are scanned.** By default the plugin asks Jira for every issue
-*you* updated during the reporting window. To scope it differently, copy your own JQL from Jira's
-issue search (use the **Switch to JQL** toggle) into a `JIRA_JQL` key in `config.md`, replacing any
-hardcoded dates with the `{start}` and `{end}` placeholders — the plugin fills those per run:
-
-```
-JIRA_JQL = issuekey in updatedBy("{email}", "{start}", "{end}") order by updatedDate desc
-```
+**Optional — customize which issues are scanned.** `JIRA_JQL` in `config.md` already carries the
+default query above (every issue *you* updated during the reporting window) — you don't need to
+add it yourself. To scope it differently, copy your own JQL from Jira's issue search (use the
+**Switch to JQL** toggle) and paste it over the default, replacing any hardcoded dates with the
+`{start}` and `{end}` placeholders so the plugin can fill those in per run.
 
 ### 3b — GitHub token (`git-summary`)
 
@@ -232,11 +293,21 @@ python <plugin>/scripts/azure_devops_fetch.py --check
 ### 3d — Airtable personal access token (`weekly-515-rollup`)
 
 1. Go to <https://airtable.com/create/tokens> and click **Create token**.
-2. Under **Scopes**, add `data.records:read` and `schema.bases:read`.
-3. Under **Access**, add the base your 515 tracker lives in — **and** your goals base if you set
-   `AIRTABLE_GOALS_URL`. Both bases need to be on the list.
-4. Save it as `AIRTABLE_API_KEY` in `credentials.md`.
-5. Verify:
+2. Under **Scopes**, add **only** `data.records:read` and `schema.bases:read` — read-only, no
+   write scopes. The roll-up never needs to write to Airtable (see below), so don't add
+   `data.records:write` or anything else just in case.
+3. Under **Access**, add **exactly two bases** — no more, no less:
+   - The **515 weekly tracker** base (the one `AIRTABLE_515_URL` points into) — always required.
+   - The **FY27 Resource Planner** base (the one `AIRTABLE_GOALS_URL` points into, if you set it)
+     — only needed if you're using the `goals-summary` collector.
+   Both need to be on the **Access** list for the token to see them; adding scopes alone isn't
+   enough (see the warning below).
+4. **Expiration: choose "No expiration."** Unlike the Jira and GitHub tokens below, this one is
+   meant to be set up once and left alone — there's no scheduled rotation for it. Leave
+   `AIRTABLE_API_KEY_EXPIRES` out of `credentials.md` entirely; it doesn't apply here, and adding a
+   date would make the collector warn about an expiry that was never going to happen.
+5. Save the token itself as `AIRTABLE_API_KEY` in `credentials.md`.
+6. Verify:
 
 ```bash
 python <plugin>/scripts/airtable_fetch.py --check
@@ -247,7 +318,9 @@ That prints each table and view name, the field list, and whether the view retur
 > **Don't skip the Access step.** A token with scopes but no base added authenticates fine and then
 > returns **HTTP 404 for the base** — it reads like a wrong URL rather than a permissions problem.
 > This is also the trap when you *add* a second base later: the token keeps working for the first one
-> and 404s only for the new one.
+> and 404s only for the new one. If you add `AIRTABLE_GOALS_URL` after the fact, come back here and
+> add the FY27 Resource Planner base to the same token's **Access** list — don't create a second
+> token for it.
 >
 > **`schema.bases:read` is worth adding.** It's what supplies your real field names and the valid
 > options for select fields like Goals. Without it the roll-up still runs, but it has to guess those
@@ -260,10 +333,12 @@ That prints each table and view name, the field list, and whether the view retur
 Read-only is deliberate here: the roll-up writes a local draft you review and paste into Airtable
 yourself, so no token in this plugin ever needs write access.
 
-**Tokens expire** (Atlassian defaults to about a year; GitHub and Airtable use whatever expiry you
-pick). When one does, that collector fails with a clear `HTTP 401`; create a replacement, paste it
-into `credentials.md`, and revoke the old one. If you record the expiry date alongside the token —
-`JIRA_API_TOKEN_EXPIRES`, `AZURE_DEVOPS_PAT_EXPIRES`, `AIRTABLE_API_KEY_EXPIRES` — the collector
+**Tokens expire** (Atlassian defaults to about a year; GitHub uses whatever expiry you pick).
+**Airtable is the exception — set it to "No expiration" when you create it (see above)** and don't
+track an expiry date for it. When a Jira or GitHub token does lapse, that collector fails with a
+clear `HTTP 401`; create a replacement, paste it into `credentials.md`, and revoke the old one. If
+you record the
+expiry date alongside those two — `JIRA_API_TOKEN_EXPIRES`, `AZURE_DEVOPS_PAT_EXPIRES` — the collector
 warns you for the three weeks beforehand instead of failing mid-week.
 
 ## Step 4 — Slack and personal notes (manual paste, by default)
@@ -273,16 +348,53 @@ to open anything in a browser. Instead, each writes a stub file labeled `Status:
 and the run pauses there:
 
 - **Slack** — open your saved **"Weekly Activity Summary"** skill (or whatever recap you use) in
-  Slack yourself, run it, and paste the reply into the stub when Claude asks.
+  Slack yourself, run it, and paste the reply into the stub when Claude asks. Don't have that
+  skill yet? See **"Creating the Weekly Activity Summary Slack skill"** below — it's a one-time,
+  few-minute setup.
 - **Personal notes** — open wherever you keep notes yourself (OneNote, Notepad, Word, a notebook,
-  whatever) and paste the week's entries into the stub when Claude asks.
+  whatever) and paste the week's entries into the stub when Claude asks. The stub itself spells out
+  how (find the week's entries, keep original dates if you have them, a raw/unordered paste is
+  fine) — you don't need to prepare anything beforehand.
 
-A raw paste is fine for both — no cleanup needed. `run-weekly-515` won't draft the final roll-up
-until both stubs (for whichever of the two you actually use) are filled; if you don't use one of
-them, say so and that collector is skipped instead of stubbed.
+**Both stubs get written every time, whether or not you've set `SLACK_URL`/`NOTES_LOCATION`/
+`NOTES_URL`** — those were never required for the paste workflow, only nice-to-have hints. A raw
+paste is fine for both — no cleanup needed. `run-weekly-515` won't draft the final roll-up until
+both stubs are filled; the **only** way either gets skipped instead is by telling Claude directly
+that you don't use Slack, or don't keep separate notes — it won't ask that proactively, so say so
+whenever it's true for you.
 
 Jira, GitHub, Azure DevOps, and the Microsoft 365 sources (mail, calendar) all still work normally
 — none of them has ever used the browser.
+
+### Creating the "Weekly Activity Summary" Slack skill
+
+This is a **Slackbot skill** (Slack's own saved-prompt AI feature, not a Claude or PBS-specific
+thing) — a reusable prompt you build once inside Slack and run every week:
+
+1. In Slack's desktop app, click **Slackbot** in your sidebar (click **More** first if you don't
+   see it), then open the **Skills** tab.
+2. Click **Add skill → Create a skill → Build from scratch**.
+3. Under **Description**, write something like: *"Summarizes what I worked on, decided, and
+   flagged as blocked across my Slack channels and DMs for the current work week — for my weekly
+   515 report."* This is what Slackbot uses to know when to apply the skill.
+4. Name it by clicking **[New Skill]** — call it **Weekly Activity Summary** (this plugin's docs
+   and stubs refer to it by that exact name, so Claude knows what to ask for).
+5. Under **Steps**, write the actual instructions, e.g.:
+   > Figure out the most recently completed Monday–Friday work week relative to today. Search my
+   > activity — messages I sent and threads I participated in — across all the channels and DMs
+   > I'm in, within that range. Summarize it, grouped by topic or project: decisions I made or
+   > helped land, things I moved forward or unblocked, anything I flagged as blocked or waiting
+   > on, and other notable discussions worth remembering. Be factual and specific — dates, names,
+   > concrete outcomes, no editorializing.
+6. Under **Output**, describe the format: *"A plain-text reply in this chat, organized under
+   Decisions / Progress & Accomplishments / Blockers & Open Threads / Notable Discussions headers,
+   ready to copy and paste elsewhere."* Matching `chat-summary`'s own section headers here means
+   your paste drops in almost as-is.
+7. Click **Use skill** to test it, then adjust the description/steps/output (directly, or by
+   asking Slackbot to revise them) until the output looks right.
+
+Once saved, it shows up under the **Skills** tab any time — run it each Friday (or whenever you're
+doing your 515) and paste the reply into the `chat-summary.md` stub.
 
 > **If your organization has since re-enabled Claude in Chrome**, both collectors can read their
 > source directly instead of asking for a paste — see the SKILL.md files if you want to switch.
@@ -301,13 +413,23 @@ Jira, GitHub, Azure DevOps, and the Microsoft 365 sources (mail, calendar) all s
   `claude-summary`, or `weekly-515-rollup`.
 - **Just want to see what's configured?** Ask *"what sources do I have set up for my 515?"* — the
   same check `run-weekly-515` does at the start of every run.
-- **Where to run it, if you use Claude Code:** run from a genuine Claude Code session — the CLI,
-  the VS Code/JetBrains extension, or the desktop app's own **Code** surface — rather than Cowork,
-  so `claude-summary` can see your real `~/.claude/projects/` transcripts. Run from Cowork and that
-  one surface comes back not-collected instead. Trade-off: the VS Code/JetBrains extensions have no
-  Microsoft 365 Connectors UI, so if you run from one of those, paste `email-summary`/
-  `calendar-summary` in manually instead of relying on the connector — see the note near the top of
-  this guide.
+- **Where to run it, if you use Claude Code — and why you may need to run twice:** run from a
+  genuine Claude Code session (the CLI, the VS Code/JetBrains extension, or the desktop app's own
+  **Code** surface) rather than Cowork, so `claude-summary` can see your real
+  `~/.claude/projects/` transcripts. Run from Cowork and that one surface comes back not-collected
+  instead. The catch, confirmed: **no Code surface has the Microsoft 365 connector**, including the
+  desktop app's own Code surface — so if you run from Code, `email-summary`/`calendar-summary`
+  can't reach Outlook from that same session. Two ways to handle it:
+  1. **Run `run-weekly-515` from Code**, letting it skip email/calendar as "not configured" (or
+     mark them not-collected). Then separately, **from Cowork or Claude Desktop**, run
+     `email-summary` and `calendar-summary` on their own for the same week and let them write into
+     the *same* `<your folder>/<FRIDAY>/` folder your Code run used. Finally run `weekly-515-rollup`
+     (from either surface) once both runs have landed their files there.
+  2. Or skip email/calendar from your 515 entirely if they're not worth the extra pass — they're
+     optional like everything else.
+
+  Either way, don't run `weekly-515-rollup` until you've decided — it reads whatever's in the
+  folder at that moment, so a rollup run between the two passes will draft without email/calendar.
 
 **The week & output folder:** everything targets one **Mon–Fri** work week, anchored to a Friday,
 with the cutover on **Wednesday**:

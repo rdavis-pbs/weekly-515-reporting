@@ -154,7 +154,10 @@ Read every file present in the `<FRIDAY>` folder:
 Some may be missing if a source isn't configured, had no activity, or wasn't run — that's fine; work
 with what's there and note which sources were unavailable. Every collector is optional, not just
 Azure DevOps — a missing file for a source the user doesn't use (no Jira, no Azure DevOps, no
-separate personal-notes habit, whatever) is a config choice, not a gap.
+separate personal-notes habit, whatever) is a choice, not a gap. `chat-summary.md` and
+`notes-summary.md` specifically are expected to exist as a stub even when unused — see the
+`AWAITING INPUT` check right below — since those two always write a stub by default regardless of
+config; the user opts out of them by saying so, not by a missing key.
 
 **Before drafting from `chat-summary.md` or `notes-summary.md`, check for `Status: AWAITING
 INPUT`.** That marks a stub still waiting on a manual paste (the default path while Claude in

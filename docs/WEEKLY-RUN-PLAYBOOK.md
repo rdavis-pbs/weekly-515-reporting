@@ -47,13 +47,19 @@ directly rather than recorded here as a deviation.
 
 ## Preflight (ten seconds, saves a wasted run)
 
-1. **Token expiry.** Check `JIRA_API_TOKEN_EXPIRES` in `.weekly-515-reporting/credentials.md` is
-   still in the future. A token that lapsed mid-week cost the 8/14/2026 run its entire Jira
-   coverage. `AIRTABLE_API_KEY_EXPIRES` is optional and may be absent.
-2. **Config completeness.** `config.md` should carry `SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`,
-   `JIRA_JQL`, `AIRTABLE_515_URL`, `AIRTABLE_GOALS_URL`, `OUTPUT_ROOT`. List the keys with a grep
-   for `^[A-Z_]* *=` — **don't** echo the values into the transcript. `NOTES_LOCATION`/`NOTES_URL`
-   are deliberately unset — see "Where Robert's notes live" below instead. `AZURE_DEVOPS_ORG_URL`
+1. **Token expiry — never by opening `credentials.md`.** Run
+   `python weekly-515-reporting/scripts/jira_fetch.py --check` and read *its* stdout: `_common.py`
+   already reads `JIRA_API_TOKEN_EXPIRES` internally and prints its own `WARNING: ... expires in N
+   day(s)` note when it's close, without you ever opening the file. A token that lapsed mid-week
+   cost the 8/14/2026 run its entire Jira coverage — this is the check that would have caught it.
+   There's no `AIRTABLE_API_KEY_EXPIRES` to worry about — that token was created with "No
+   expiration," deliberately, so it's not on a rotation schedule the way Jira/GitHub tokens are.
+2. **Config completeness.** `config.md` should carry `JIRA_EMAIL`, `AIRTABLE_515_URL`,
+   `AIRTABLE_GOALS_URL`, `OUTPUT_ROOT` — `JIRA_SITE` and `JIRA_JQL` ship pre-filled by default and
+   don't need checking, and `SLACK_URL` was never required (Slack's stub always gets written
+   regardless). List the keys with a grep for `^[A-Z_]* *=` — **don't** echo the values into the
+   transcript. `NOTES_LOCATION`/`NOTES_URL` are deliberately unset — see "Where Robert's notes
+   live" below instead; the notes stub gets written either way. `AZURE_DEVOPS_ORG_URL`
    is not yet set, so `azure-git-summary` is skipped — that's expected until it's added, not a
    failure to flag. This whole check is just the generic "Source availability" step
    (`shared/work-week.md` §2c) with Robert's own current state as the example.

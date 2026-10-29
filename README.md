@@ -64,12 +64,16 @@ just run any skill and let first-run setup create it for you.
 Every key below is **optional** except `AIRTABLE_515_URL` — set only the ones for sources you
 actually use; leaving the rest out just skips that collector.
 
-- `SLACK_URL` — *optional.* Your Slack workspace/channel URL (used by `chat-summary`). Omit it
-  entirely if you don't use Slack.
-- `JIRA_SITE` / `JIRA_EMAIL` — *optional.* Your Atlassian host and account email (used by
-  `jira-summary`). Omit both if you don't use Jira.
-- `JIRA_JQL` — *optional.* Custom JQL with `{start}`/`{end}` placeholders; defaults to "issues you
-  updated in the window."
+- `SLACK_URL` — *optional, and not even required to use Slack collection* — `chat-summary` always
+  writes its paste stub regardless; this just adds a convenience link to the prompt. Tell Claude
+  you don't use Slack to actually skip it.
+- `JIRA_SITE` — ships **pre-filled** to the org's shared Atlassian host (every colleague here is
+  at PBS); you normally don't touch it.
+- `JIRA_EMAIL` — **this is what turns Jira collection on**, now that `JIRA_SITE` is always
+  present. Set it to your own Atlassian account email to opt in; leave it a placeholder (or delete
+  the line) and `jira-summary` is skipped.
+- `JIRA_JQL` — on by default (every issue you updated in the window); edit it only if you want a
+  different query, using the `{start}`/`{end}` placeholders.
 - `NOTES_LOCATION` / `NOTES_URL` — *optional.* Used by `notes-summary`, which is tool-agnostic
   (OneNote, Notepad, Word, a notebook, whatever). Omit both and it just asks you directly each run.
 - `AIRTABLE_515_URL` — **required.** Your 515 base/view URL (used by `weekly-515-rollup`) — the one
@@ -87,7 +91,14 @@ actually use; leaving the rest out just skips that collector.
 **API tokens** go in `.weekly-515-reporting/credentials.md` (template:
 `shared/credentials.example.md`), never in `config.md`:
 
-- `JIRA_API_TOKEN` — <https://id.atlassian.com/manage-profile/security/api-tokens>
+- `AIRTABLE_API_KEY` — <https://airtable.com/create/tokens> (**required**; scopes
+  `data.records:read` + `schema.bases:read` only; **Access** limited to exactly the 515 tracker
+  base and, if used, the FY27 Resource Planner base — nothing else; **expiration: "No
+  expiration"**, unlike the tokens below, since this one isn't meant to be rotated on a schedule)
+- `JIRA_API_TOKEN` — <https://id.atlassian.com/manage-profile/security/api-tokens> (the plain
+  **"Create API token"** option, classic/no scopes — **not** "Create API token with scopes"; a
+  scoped token is routed through `api.atlassian.com` instead of your site's own URL, which this
+  script doesn't call, so it 401s here regardless of scopes granted)
 - `GITHUB_TOKEN` — <https://github.com/settings/tokens> (needs `repo` on a classic token, or
   read-only Contents/Pull-requests/Issues/Metadata on a fine-grained one, to see private repos)
 - `AZURE_DEVOPS_PAT` — `https://dev.azure.com/{org}/_usersSettings/tokens` (needs **Code (Read)**;
@@ -97,26 +108,31 @@ actually use; leaving the rest out just skips that collector.
 
 - **Microsoft 365** (Outlook mail, calendar) — used directly. Optional in the sense that
   `email-summary`/`calendar-summary` are skipped if the connector isn't authorized. The connector
-  shows up in Cowork and Claude Desktop; the **VS Code/JetBrains Claude Code extensions have no
-  Connectors UI**, so running the plugin from one of those means pasting email/calendar in
-  manually instead (see the Claude Code bullet below for why you might choose that trade-off).
+  shows up in **Cowork** (confirmed working there); **no genuine Claude Code surface has it** —
+  not the VS Code/JetBrains extensions, and not the desktop app's own **Code** surface either
+  (confirmed by a colleague on v0.13.0, despite it being the same app as Cowork). Running the
+  plugin from Code means pasting email/calendar in manually instead (see the Claude Code bullet
+  below for why you might still choose that trade-off).
 - **Airtable** — the **Airtable REST API** with your own personal access token, via
   `scripts/airtable_fetch.py`. Two sources: your 515 records (`AIRTABLE_515_URL`, **required** —
   the format) and optionally your FY goals/tasks (`AIRTABLE_GOALS_URL`, for Next Week's
   Priorities). Read-only; the Airtable connector and the browser remain as fallbacks for the 515
   read (the browser one unavailable where Claude in Chrome is disabled by policy).
 - **Jira** *(optional)* — the **Atlassian REST API** with your own API token, via
-  `scripts/jira_fetch.py`. Skipped if `JIRA_SITE`/`JIRA_EMAIL` aren't set.
+  `scripts/jira_fetch.py`. `JIRA_SITE` ships pre-filled to the org's shared host; skipped if
+  `JIRA_EMAIL` isn't set to your own account email.
 - **GitHub** *(optional)* — the **GitHub REST API** with your own token, via
   `scripts/github_fetch.py`. Skipped if `GITHUB_TOKEN` isn't set.
 - **Azure DevOps** *(optional)* — the **Azure DevOps REST API** with your own personal access
   token, via `scripts/azure_devops_fetch.py`. Skipped entirely if `AZURE_DEVOPS_ORG_URL` isn't set.
   All fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
-- **Slack** *(optional)*, **personal notes** *(optional, any tool)* — read by **manual paste** by
-  default: `chat-summary` and `notes-summary` write an `AWAITING INPUT` stub and the run pauses
-  until you paste, since Claude in Chrome is disabled org-wide at PBS. Both fall back to reading
-  their source directly through the browser instead, if that extension is ever available again.
-  Skipped (not stubbed) if you don't use Slack, or don't keep separate notes.
+- **Slack**, **personal notes** (any tool) — read by **manual paste** by default: `chat-summary`
+  and `notes-summary` *always* write an `AWAITING INPUT` stub and the run pauses until you paste,
+  since Claude in Chrome is disabled org-wide at PBS — neither is gated by `SLACK_URL` or
+  `NOTES_LOCATION`/`NOTES_URL`, which are just optional convenience hints. Both fall back to
+  reading their source directly through the browser instead, if that extension is ever available
+  again. The only way either is skipped is by telling Claude you don't use Slack, or don't keep
+  separate notes — not by leaving a config key unset.
 - **claude.ai chat** — read through the browser (Claude in Chrome) when available; marked
   **not-collected** (not "no activity" — a different claim) while the extension is disabled.
 - **Cowork** — read from the Claude desktop app (desktop-only; no web URL), by `claude-summary`.
@@ -125,10 +141,11 @@ actually use; leaving the rest out just skips that collector.
   VS Code/JetBrains extension, or the desktop app's own Code surface) to reach them — running from
   **Cowork** instead resolves `~/.claude/projects/` to Cowork's own sandboxed, ephemeral home
   directory, not your real machine's, so that surface comes back empty and gets marked
-  not-collected rather than "no activity." Trade-off: the VS Code/JetBrains extensions have no
-  Microsoft 365 Connectors UI (see above), so picking Code over Cowork to get Claude Code history
-  usually means losing the automatic email/calendar read in exchange. Whether the desktop app's own
-  Code surface keeps both isn't confirmed yet.
+  not-collected rather than "no activity." Trade-off, confirmed, not just the IDE extensions: **no**
+  Code surface — not VS Code, not JetBrains, not the desktop app's own Code mode — has the
+  Microsoft 365 connector, so picking Code over Cowork to get Claude Code history always costs the
+  automatic email/calendar read in exchange. There is no single surface with both; see
+  `docs/COLLEAGUE-SETUP.md` for the run-twice-and-merge workaround.
 
 `run-weekly-515` reports, at the start of every run, which of the optional sources above are
 currently configured and which are available but not set up — so you always know what's included

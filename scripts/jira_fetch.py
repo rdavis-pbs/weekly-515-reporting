@@ -46,7 +46,11 @@ MAX_VALUE_CHARS = 200
 MAX_COMMENT_CHARS = 1500
 
 TOKEN_HELP = ("Create one at https://id.atlassian.com/manage-profile/security/api-tokens\n"
-              "(\"Create API token\" is enough; it inherits your own Jira permissions.)")
+              "Use the plain \"Create API token\" option (classic, no scopes) -- NOT \"Create API "
+              "token with scopes.\" A classic token inherits your own Jira permissions with "
+              "nothing to configure; a scoped token is routed through api.atlassian.com instead "
+              "of your site's own URL, which this script doesn't call, so it will 401 here no "
+              "matter which scopes you pick.")
 
 
 def normalize_site(raw):
@@ -69,6 +73,10 @@ class Jira(c.HttpClient):
         return c.ApiError(
             "Jira rejected the credentials (HTTP %d). Check JIRA_EMAIL matches the account that "
             "created the token, and that the token is not revoked/expired.\n"
+            "If the token is brand new, make sure it's a CLASSIC token (\"Create API token\", no "
+            "scopes) and not a SCOPED one (\"Create API token with scopes\") -- scoped tokens "
+            "only work through api.atlassian.com, not this site's own URL, so they 401 here "
+            "regardless of which scopes were granted.\n"
             "Tokens expire silently -- record the expiry date as JIRA_API_TOKEN_EXPIRES = "
             "YYYY-MM-DD in credentials.md and this script will warn you before it lapses.\n%s"
             % (code, detail)

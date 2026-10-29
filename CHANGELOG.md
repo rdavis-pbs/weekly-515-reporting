@@ -2,6 +2,56 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.14.0
+- **Fixed two real violations of the "never touch `credentials.md`" policy, found in this
+  plugin's own v0.13.0 work.** The new "source availability" check (`shared/work-week.md` §2c)
+  was grepping `credentials.md` directly for key presence, and `WEEKLY-RUN-PLAYBOOK.md`'s preflight
+  told the agent to open it to check `JIRA_API_TOKEN_EXPIRES` — both violate the policy even
+  though neither ever printed a secret value, since opening the file at all is what's banned.
+  Fixed: credentials.md-gated sources (GitHub, Jira, Azure DevOps, Airtable) are now checked by
+  running that source's own fetch script with `--check` and reading only its stdout/stderr; the
+  token-expiry check runs `jira_fetch.py --check` instead, which already surfaces its own expiry
+  warning. `config.md` keys (non-secret) are still grepped directly, which is fine.
+- **Clarified Atlassian token creation: use the classic "Create API token," not "Create API token
+  with scopes."** Scoped tokens are routed through `api.atlassian.com/ex/jira/{cloudId}/...`
+  instead of the site's own domain, which `jira_fetch.py` never calls — so a scoped token 401s
+  here regardless of which scopes are granted, not because of a missing permission. Classic tokens
+  have no scope picker at all; they just inherit the user's own Jira access (issues, comments,
+  changelog — `jira_fetch.py` never touches attachments). Documented everywhere a Jira token is
+  created or diagnosed, and `jira_fetch.py`'s own auth-failure message now says so directly.
+- **Tightened the Airtable token instructions**: scopes are `data.records:read` +
+  `schema.bases:read` only (no write), **Access** is exactly the 515 tracker base and the FY27
+  Resource Planner base (named concretely, not "your 515 tracker and your goals base"), and
+  expiration is "No expiration" — unlike Jira/GitHub, this token isn't on a rotation schedule.
+  Dropped `AIRTABLE_API_KEY_EXPIRES` from the credentials template entirely.
+- **Fixed three onboarding-friction points found during a colleague's first setup**, all in
+  `COLLEAGUE-SETUP.md`: (1) "Add marketplace" and "Install" are now called out as two separate,
+  easy-to-conflate clicks, after a colleague added the marketplace and assumed that was the whole
+  install; (2) Step 2 now tells people to create a brand-new, dedicated folder before connecting
+  one, with instructions for undoing an over-broad connection, after a colleague connected their
+  entire Documents folder; (3) general tightening of the Jira/Airtable token guidance above.
+- **`JIRA_SITE` now ships pre-filled** in `shared/config.example.md` with the org's shared
+  Atlassian host (`pbsdistribution.atlassian.net`), and `JIRA_JQL`'s default is active rather than
+  commented out — every colleague on this plugin is at PBS, on the same site, so there's nothing
+  to look up. This revisits an earlier precedent (the repo's first commit leaked this same
+  hostname and had to be scrubbed, back when the repo was public with no users yet); decided this
+  time that an org's own Atlassian subdomain isn't sensitive enough to withhold from every
+  colleague for the sake of one line of setup. Since `JIRA_SITE` is now always present, it's no
+  longer a useful "did this person opt in" signal — `JIRA_EMAIL` (which must be set to the user's
+  real account email) is the trigger now, updated everywhere that used to check both keys
+  together.
+- **Added step-by-step instructions for creating the "Weekly Activity Summary" Slackbot skill**
+  to `COLLEAGUE-SETUP.md` — the plugin previously assumed every colleague already had this saved
+  Slack skill without ever explaining how to build one (it's Slack's own saved-prompt AI feature,
+  not a Claude/PBS-specific thing).
+- **`chat-summary` and `notes-summary` now always write their `AWAITING INPUT` stub**, regardless
+  of whether `SLACK_URL`/`NOTES_LOCATION`/`NOTES_URL` are configured — those keys were never
+  actually required for the manual-paste workflow, just optional hints. The only way either
+  collector is now skipped is the user explicitly saying they don't use Slack or don't keep
+  separate notes, not a missing config key. Also expanded the notes stub with concrete paste
+  instructions (where to look, what date range, raw/unordered paste is fine) instead of one
+  generic line.
+
 ## 0.13.0
 - **Every collector is now optional, not just `azure-git-summary`.** Different colleagues rely on
   different tools, so a missing config key now cleanly skips the source it belongs to, with no

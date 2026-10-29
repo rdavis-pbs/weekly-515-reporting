@@ -61,12 +61,14 @@ app's own native Code surface (as opposed to its Cowork surface). All of these w
 real `~/.claude/projects/`, so none of them is special-cased over another; it's "Code vs. Cowork,"
 not "VS Code vs. everything else."
 
-**Trade-off to flag to the user:** the VS Code and JetBrains extensions have no Microsoft 365
-Connectors UI, so choosing one of those to get this surface usually means `email-summary` and
-`calendar-summary` can't run their connector calls in that same session — those get pasted in
-manually instead (same pattern as `chat-summary`/`notes-summary`). Whether the desktop app's own
-Code surface keeps the Microsoft 365 connector too (since it's the same app as Cowork) isn't
-confirmed; if the user is on that surface, it's worth them just trying `email-summary` and seeing.
+**Trade-off to flag to the user — confirmed, not hypothetical:** no genuine Claude Code surface has
+a Microsoft 365 Connectors UI, including the desktop app's own Code surface (confirmed by a
+colleague despite it being the same app as Cowork, which does have the connector). Choosing Code to
+get this surface means `email-summary` and `calendar-summary` can't run their connector calls in
+that same session, full stop — there is no single surface with both. Those two get pasted in
+manually instead (same pattern as `chat-summary`/`notes-summary`), typically by running them once
+separately from Cowork/Claude Desktop and merging the output into the same `<FRIDAY>/` folder
+before the roll-up.
 
 If you can't avoid running inside Cowork, still attempt this step (don't skip it up front per the
 note above), but expect it to come back empty, and mark it **not-collected** rather than reporting

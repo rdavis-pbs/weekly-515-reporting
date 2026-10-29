@@ -38,18 +38,21 @@ run this week, and what's available but not set up (with a one-line note on what
 it). This also doubles as a quick way to show the user their current setup any time they ask "what
 sources do I have configured."
 
-## Step 3 — Run each configured collector
+## Step 3 — Run each collector
 
-Carry out each of these skills in turn, following that skill's own SKILL.md — but **only the ones
-Step 2 found configured** (or that need no config at all). Skip the rest outright rather than
-invoking them and letting them fail; that skip is already reflected in Step 2's report, so don't
-re-report it as a gap here. They're independent, so a failure in one should not stop the others —
-capture what each produces and move on:
+Carry out each of these skills in turn, following that skill's own SKILL.md. For most of them,
+run **only the ones Step 2 found configured** (or that need no config at all) — skip the rest
+outright rather than invoking them and letting them fail; that skip is already reflected in Step
+2's report, so don't re-report it as a gap here. **`chat-summary` and `notes-summary` are the
+exception: always run them**, regardless of what Step 2 found, since neither needs any config to
+write its paste stub — only skip either one if the user has told you directly they don't use that
+source. They're all independent, so a failure in one should not stop the others — capture what
+each produces and move on:
 
-1. `chat-summary`  (Slack via Slackbot summary, read by manual paste — Teams is not a source)
+1. `chat-summary`  (Slack via Slackbot summary, read by manual paste — always run; Teams is not a source)
 2. `email-summary`  (Outlook sent + received, via the Microsoft 365 connector)
 3. `calendar-summary`  (Outlook events, via the Microsoft 365 connector)
-4. `notes-summary`  (personal notes, any tool, read by manual paste)
+4. `notes-summary`  (personal notes, any tool, read by manual paste — always run)
 5. `git-summary`  (GitHub via the REST API — no browser)
 6. `azure-git-summary`  (Azure DevOps Git via the REST API — no browser)
 7. `jira-summary`  (Jira via the Atlassian REST API — no browser)

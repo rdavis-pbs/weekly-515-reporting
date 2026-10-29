@@ -5,9 +5,10 @@ description: >
   the weekly folder) and save it as jira-summary.md in the weekly 515 folder. Pulls issues,
   comments, and field-change history from the Atlassian Jira Cloud REST API with the user's own API
   token — no browser and no Jira/Atlassian connector required. Optional — skipped automatically if
-  `JIRA_SITE`/`JIRA_EMAIL` aren't configured. Use whenever the user wants their weekly Jira activity
-  captured for their 515 report, asks "summarize my Jira this week", "what tickets did I move", or
-  runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
+  `JIRA_EMAIL` isn't set to the user's own account email (`JIRA_SITE` ships pre-filled to the
+  org's shared Atlassian host, so it's not the gate). Use whenever the user wants their weekly
+  Jira activity captured for their 515 report, asks "summarize my Jira this week", "what tickets
+  did I move", or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
 ---
 
 # Jira summary (Atlassian REST API)
@@ -61,15 +62,23 @@ you do not need to compute dates. The saved filter's own hardcoded dates are irr
 
 Its error messages say what to fix; relay the fix rather than working around it.
 
-- **No config / missing `JIRA_SITE` or `JIRA_EMAIL`** — run the first-run setup in the **Config
-  location** section of `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md`, creating
-  `.weekly-515-reporting/config.md` from `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md`.
+- **No config, or `JIRA_EMAIL` still a placeholder** — `JIRA_SITE` ships pre-filled to the org's
+  shared Atlassian host, so it's rarely the problem; `JIRA_EMAIL` is the key that actually has to
+  be set to the user's real account email. If `config.md` doesn't exist at all, run the first-run
+  setup in the **Config location** section of `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md`,
+  creating it from `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md`.
 - **No API token** — the user creates one at
-  <https://id.atlassian.com/manage-profile/security/api-tokens> and saves it as `JIRA_API_TOKEN` in
-  `.weekly-515-reporting/credentials.md` (template: `${CLAUDE_PLUGIN_ROOT}/shared/credentials.example.md`).
-  Never echo the token, and never write it into `config.md` or any report file.
-- **HTTP 401/403** — token expired or revoked, or `JIRA_EMAIL` isn't the account that created it.
-  Atlassian tokens expire (roughly annually); the fix is a fresh token.
+  <https://id.atlassian.com/manage-profile/security/api-tokens> using the plain **"Create API
+  token"** option (classic, no scopes) — **not** "Create API token with scopes." Then saves it as
+  `JIRA_API_TOKEN` in `.weekly-515-reporting/credentials.md` (template:
+  `${CLAUDE_PLUGIN_ROOT}/shared/credentials.example.md`). Never echo the token, and never write it
+  into `config.md` or any report file.
+- **HTTP 401/403** — usually token expired or revoked, or `JIRA_EMAIL` isn't the account that
+  created it (Atlassian tokens expire roughly annually; the fix is a fresh token). **But if the
+  token is brand new and still fails**, check whether it's a *scoped* token (Atlassian's "API token
+  with scopes" option) — those only work through `api.atlassian.com`, not the site URL this script
+  calls directly, so they 401 here no matter which scopes were granted. The fix there is a plain
+  classic token instead, not more scopes.
 - **JQL error** — `JIRA_JQL` is malformed. Ask the user to re-copy it from Jira's issue search via
   the "Switch to JQL" toggle, with hardcoded dates replaced by `{start}`/`{end}`.
 

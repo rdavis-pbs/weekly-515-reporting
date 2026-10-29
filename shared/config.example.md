@@ -12,28 +12,34 @@ values reads it from `<your folder>/.weekly-515-reporting/config.md` by key. Eas
 any skill and let first-run setup create it for you.
 
 ```
-# OPTIONAL. Slack workspace/channel URL (chat-summary points you here to run your saved recap
-# skill and paste the result -- Claude in Chrome is disabled org-wide at PBS, so this isn't opened
-# automatically). Omit the key entirely if you don't use Slack; that collector is skipped.
+# OPTIONAL -- but chat-summary always writes a paste-stub either way (see its SKILL.md); this is
+# just a convenience link, never opened automatically since Claude in Chrome is disabled org-wide
+# at PBS. Leave it as the placeholder (or delete the line) if you don't use Slack and tell Claude
+# so when it asks -- that's what actually skips the collector, not this key.
 SLACK_URL        = <your Slack URL, e.g. https://app.slack.com/client/TXXXXXXXX/CXXXXXXXX>
 
-# --- Jira (jira-summary reads these via the Atlassian REST API) --- OPTIONAL, all of it.
-# Your Atlassian Cloud site host, and the account email that owns the API token.
-# The token itself goes in credentials.md, NOT here — see shared/credentials.example.md.
-# Leave both keys out entirely if you don't use Jira; that collector is skipped.
-JIRA_SITE        = <your Atlassian host, e.g. yourorg.atlassian.net>
+# --- Jira (jira-summary reads these via the Atlassian REST API) ---
+# JIRA_SITE is pre-filled below since every colleague on this plugin is at PBS, on the same
+# Atlassian site -- you shouldn't need to change it.
+JIRA_SITE        = pbsdistribution.atlassian.net
+
+# JIRA_EMAIL is what actually turns Jira collection on -- there's no key for JIRA_SITE alone to
+# gate on, since it's always present now. Leave this as the placeholder (or delete the line) if
+# you don't use Jira, and jira-summary is skipped. Set it to your real Atlassian account email
+# (the one that creates the API token in credentials.md) to opt in.
 JIRA_EMAIL       = <the email on your Atlassian account, e.g. you@example.com>
 
-# OPTIONAL. JQL selecting the issues you touched. Placeholders are substituted per run:
+# JQL selecting the issues you touched. On by default (not commented out) -- every issue you
+# updated during the reporting window, with your email and the week's dates filled in per run:
 #   {email}      your JIRA_EMAIL
 #   {start}      window start, YYYY/MM/DD  (Jira date format)
 #   {end}        window end + 1 day, YYYY/MM/DD — Jira's date-only comparisons land on midnight,
 #                so the extra day keeps the final day's activity; the script then filters every
 #                comment and field change to the exact window itself.
 #   {start_iso}  {end_iso}   the same dates as YYYY-MM-DD
-# Omit this key to use the default below. Copy your saved filter's JQL here (Jira's issue search
-# has a "Switch to JQL" toggle) and replace its hardcoded dates with the placeholders.
-# JIRA_JQL       = issuekey in updatedBy("{email}", "{start}", "{end}") order by updatedDate desc
+# Leave as-is unless you want a different query. Copy your saved filter's JQL here instead (Jira's
+# issue search has a "Switch to JQL" toggle) and replace its hardcoded dates with the placeholders.
+JIRA_JQL         = issuekey in updatedBy("{email}", "{start}", "{end}") order by updatedDate desc
 
 # OPTIONAL. Only a convenience link for humans now — the API path does not read it.
 # JIRA_FILTER_URL = <your Jira saved-filter URL, e.g. https://yourorg.atlassian.net/issues/?filter=NNNNN>

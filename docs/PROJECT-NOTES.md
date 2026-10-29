@@ -102,6 +102,15 @@ a second colleague with a different toolset started using the plugin.
   needs no per-surface registration and behaves identically in Cowork and Claude Code. (An MCP
   server would only pay off if Jira needed to be queried interactively; the fetch code could be
   lifted into one later.)
+  - **Requires a classic API token, not a scoped one.** `Jira.__init__` in `jira_fetch.py`
+    authenticates with Basic Auth directly against `https://{JIRA_SITE}/...`. Atlassian's newer
+    "API token with scopes" tokens are routed through `api.atlassian.com/ex/jira/{cloudId}/...`
+    instead — a different host this script never calls — so a scoped token 401s here regardless
+    of which scopes were granted; it isn't a permissions gap, it's the wrong token type. Supporting
+    scoped tokens would mean resolving the cloud ID and switching the base URL, which hasn't been
+    done since classic tokens already cover the need (read-only, same-as-your-own-access). Documented
+    everywhere a Jira token is created: `COLLEAGUE-SETUP.md`, `shared/credentials.example.md`,
+    `README.md`, `jira-summary/SKILL.md`, and the script's own error message.
 - **Airtable goals/tasks** (`AIRTABLE_GOALS_URL`, optional) — the user's own view of the **Tasks**
   tab of the FY resource-planner base (e.g. "FY27 Resource Planner"; it also has **Goals** and
   **Metrics** tabs, which aren't fetched directly — each task links to one of each, and the script's
@@ -237,16 +246,58 @@ one won had depended on the shell's working directory.
       Slack/notes) — see `WEEKLY-RUN-PLAYBOOK.md`. Documented as general guidance for any colleague
       in README, `COLLEAGUE-SETUP.md`, and `claude-summary/SKILL.md`: running from Code (CLI,
       VS Code/JetBrains extension, or the desktop app's own Code surface) gets Claude Code history
-      but may cost the Microsoft 365 connector depending on which surface; running from Cowork gets
-      Microsoft 365 for certain but not Claude Code history. Not yet confirmed whether the desktop
-      app's own **Code** surface (as opposed to Cowork, or the VS Code/JetBrains extensions) has the
-      Connectors UI that Cowork has — if it does, that would be the one surface with both.
+      but costs the Microsoft 365 connector; running from Cowork gets Microsoft 365 for certain but
+      not Claude Code history. **Confirmed by a colleague (v0.13.0 rollout): the desktop app's own
+      Code surface also has no Microsoft 365 connector** — so there is no single surface that gets
+      both. The practical answer is to run twice and merge: once from Code for `claude-summary`
+      (and the REST-API sources), once from Cowork/Claude Desktop for `email-summary`/
+      `calendar-summary`, pasting the Cowork run's output into the same `<FRIDAY>/` folder the Code
+      run used before the roll-up. Documented in `COLLEAGUE-SETUP.md`.
+- [x] **Onboarding friction found during a colleague's first setup (v0.13.0), fixed in
+      `COLLEAGUE-SETUP.md`:**
+      - **"Add marketplace" and "Install" are two separate, easy-to-conflate clicks.** A colleague
+        added the marketplace and stopped there, assuming that was the whole install — the plugin
+        itself was never installed, so none of its skills existed yet. Step 1 now calls this out
+        explicitly as two distinct parts.
+      - **The first-run "connect a folder" prompt gives no guidance on scope,** and a colleague
+        connected their entire Documents folder rather than a new, dedicated one — oversharing
+        everything in Documents to the plugin's reach, not just the 515 config/output. Step 2 now
+        tells people to create a brand-new empty folder first and connect *that*, with a note on
+        how to disconnect an over-broad folder already connected and reconnect a narrower one.
+      - **The Airtable token's scope and bases weren't spelled out concretely enough.** Tightened
+        Step 3d: scopes are `data.records:read` + `schema.bases:read` **only** (no write scope),
+        **Access** is **exactly two bases** — the 515 weekly tracker and the FY27 Resource Planner
+        — and **expiration is "No expiration"**, unlike Jira/GitHub, since this token isn't on a
+        rotation schedule. `AIRTABLE_API_KEY_EXPIRES` is dropped from the template entirely rather
+        than left optional, so nothing implies it should be tracked.
 - [x] **Every collector made optional, not just Azure DevOps (v0.13.0).** Different colleagues use
       different tools, so a missing config key now skips a source cleanly instead of being either
       hardcoded-required or (for everything but Azure DevOps) simply undocumented as skippable.
       `shared/work-week.md` §2c defines the one availability check; `run-weekly-515` runs it before
       every full run and reports two lists — configured vs. available-but-unset — so the user sees
       their own setup without re-deriving it from nine SKILL.md files.
+- [x] **Slack and personal notes carved out as the exception to the config-gated model.** Neither
+      `SLACK_URL` nor `NOTES_LOCATION`/`NOTES_URL` was ever actually required for the manual-paste
+      workflow — they're just hints that make the paste prompt more specific. `chat-summary` and
+      `notes-summary` now **always** write their `AWAITING INPUT` stub regardless of whether those
+      keys are set; the only way either collector is skipped is the user saying, in reply, that
+      they don't use Slack or don't keep separate notes — not a missing config key. Also expanded
+      the notes stub with concrete paste instructions (where to look, what date range, that a raw/
+      unordered paste is fine) rather than a one-line generic ask. Added step-by-step instructions
+      in `COLLEAGUE-SETUP.md` for creating the "Weekly Activity Summary" Slackbot skill itself
+      (Slack's own saved-prompt AI feature), since the plugin previously assumed it already
+      existed without ever explaining how to make one.
+- [x] **`JIRA_SITE` pre-filled with the org's real Atlassian host (`pbsdistribution.atlassian.net`)
+      in the tracked `shared/config.example.md`, with `JIRA_EMAIL` as the opt-in trigger instead.**
+      Deliberately revisits the precedent in [[config-holds-secrets]] (this repo's first commit
+      leaked that exact hostname and had to be scrubbed) — decided this time that an org's own
+      Atlassian subdomain isn't sensitive enough to withhold, given every colleague on this plugin
+      is at PBS and typing it in manually added no real benefit. Since `JIRA_SITE` is now always
+      present, it stopped being a useful signal for "has this person opted into Jira collection" —
+      `JIRA_EMAIL` (which must be set to the user's own real account email) is the trigger now,
+      everywhere this was checked: `shared/work-week.md` §2c, `jira-summary/SKILL.md`'s error
+      handling, `COLLEAGUE-SETUP.md`, `README.md`. `JIRA_JQL`'s default is also uncommented/active
+      by default now rather than something to opt into.
 - [x] **`onenote-summary` renamed `notes-summary` and made tool-agnostic (v0.13.0).** It no longer
       assumes OneNote, or any particular note-taking tool — it asks the user to paste whatever they
       jotted down this week, wherever that lives (OneNote, Notepad, Word, a notebook, ...).

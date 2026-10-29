@@ -5,10 +5,11 @@ description: >
   chat-summary.md in the weekly 515 folder. It uses the user's saved Slack "Weekly Activity
   Summary" skill rather than the Slack connector, because the connector requires enumerating
   every chat. Reads that recap through a manual paste by default, since Claude in Chrome is
-  disabled org-wide at PBS — writes an AWAITING INPUT stub and stops until the user pastes.
-  Use whenever the user wants their weekly chat/messaging activity captured for their 515
-  report, asks to "summarize my Slack this week", or runs the weekly 515 workflow. Part of the
-  weekly-515-reporting plugin.
+  disabled org-wide at PBS — always writes an AWAITING INPUT stub and stops until the user pastes,
+  whether or not `SLACK_URL` is set in config (it isn't required; it's just a convenience link).
+  Skipped only if the user says they don't use Slack. Use whenever the user wants their weekly
+  chat/messaging activity captured for their 515 report, asks to "summarize my Slack this week",
+  or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
 ---
 
 # Chat summary (Slack)
@@ -22,6 +23,12 @@ material for the weekly 515 roll-up.
 - **Microsoft Teams is not a source.** The user does not use Teams. Do not search it, and do not
   report its absence as a gap in coverage — there is nothing there to miss.
 
+**Always write the stub by default — don't gate this on `SLACK_URL`.** `SLACK_URL` in config is
+only a convenience link; it was never required for the paste workflow, and Claude in Chrome being
+disabled means it's never opened automatically anyway. Write the Step 3 stub every time this skill
+runs, whether or not `SLACK_URL` is set. The only thing that skips this collector is the **user**
+telling you they don't use Slack — see the end of Step 2.
+
 ## Step 1 — Establish the week and output folder
 
 Read `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md` and run its snippet to get `FRIDAY`, `WEEK_START`,
@@ -33,11 +40,14 @@ Read `SLACK_URL` from the plugin config — locate it with the discovery logic i
 location** section of `${CLAUDE_PLUGIN_ROOT}/shared/work-week.md` (`.weekly-515-reporting/config.md`
 inside your connected/workspace folder; run first-run setup there if it's missing).
 
-**The user has a saved Slack skill named "Weekly Activity Summary" — prefer it.** It already
-carries the prompt and the week framing, so there is nothing to compose: the user just runs that
-skill in Slack and pastes the result. Do not hand them a prompt to paste unless they say the skill
-is gone. If a saved skill exists, it is always the right path — it's what they actually maintain,
-and a hand-built prompt will drift from it.
+**The user should have a saved Slack skill named "Weekly Activity Summary" — prefer it.** It
+already carries the prompt and the week framing, so there is nothing to compose: the user just
+runs that skill in Slack and pastes the result. If a saved skill exists, it is always the right
+path — it's what they actually maintain, and a hand-built prompt will drift from it. **If they
+don't have one yet** (new colleague, first run), point them to the creation steps in
+`docs/COLLEAGUE-SETUP.md` rather than defaulting to the ad-hoc prompt in option 3 below — it's a
+one-time, few-minute setup, and having a real saved skill keeps every week's recap consistent
+instead of drifting with whatever prompt gets typed that day.
 
 **Claude in Chrome is disabled org-wide at PBS, so manual paste is the default path, not a
 fallback.** How to obtain the recap, in order of preference:
@@ -62,6 +72,15 @@ A **raw paste is fine** and is the norm — don't reformat Slack's own bullets o
 If Slack isn't reachable or the recap returns nothing useful, note that in the output rather than
 guessing.
 
+### If the user says they don't use Slack
+
+This is the **only** way this collector gets skipped — by the user telling you so, in reply to
+the stub (or up front). When that happens, treat the stub as genuinely inapplicable rather than
+unfilled, and don't report its absence as a gap — note it once in the run's status (e.g. "Slack:
+not used") the same way an unconfigured Azure DevOps is noted. Don't ask this proactively before
+writing the stub — it costs nothing to write, and asking first just adds a round-trip for the far
+more common case of someone who *does* use Slack.
+
 ## Step 3 — Write the summary (or the stub, if awaiting a paste)
 
 **If going the manual-paste route (the default)**, write this stub to `<FRIDAY>/chat-summary.md`
@@ -75,9 +94,14 @@ source. Generated <TODAY>._
 
 ## Status: AWAITING INPUT — paste your Slack recap below
 
-Open <SLACK_URL> and run your saved **Weekly Activity Summary** skill, then paste the reply into
-the block below. **A raw paste is fine** — no cleanup needed; the roll-up reads Slack's own
-formatting.
+**How to paste:**
+1. Open Slack<!-- , e.g. <SLACK_URL>, if set --> and run your saved **Weekly Activity Summary**
+   skill (or whatever you've named your weekly recap). If you don't have one yet, see
+   `docs/COLLEAGUE-SETUP.md` for how to create it — it only takes a minute.
+2. Paste the reply into the block below. **A raw paste is fine** — no cleanup needed; the roll-up
+   reads Slack's own formatting.
+
+If you don't use Slack, just say so instead of pasting, and this file won't be used.
 
 ## Slack
 

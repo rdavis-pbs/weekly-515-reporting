@@ -23,9 +23,14 @@ one exception — it's required, since the roll-up has no 515 format to draft in
 ```
 # OPTIONAL — only if you use Jira. Atlassian API token — create one at:
 #   https://id.atlassian.com/manage-profile/security/api-tokens
-# "Create API token" is enough; the token inherits your own Jira permissions, so it can only see
-# what you can see. A scoped token also works if you prefer — it needs `read:jira-work` and
-# `read:jira-user`. Copy the value immediately; Atlassian shows it only once.
+# Use the plain "Create API token" (classic, no scopes) option, NOT "Create API token with
+# scopes." jira_fetch.py authenticates directly against your site's own domain
+# (https://yourorg.atlassian.net/...), which only classic tokens support -- scoped tokens are
+# routed through a different host (api.atlassian.com) that this script doesn't call, so they fail
+# here regardless of which scopes are selected. A classic token has no scope picker at all: it
+# just inherits your own Jira permissions, so it can read (issues, comments, changelog -- anything
+# you can already see in the UI) exactly as much as you can. Copy the value immediately; Atlassian
+# shows it only once.
 JIRA_API_TOKEN = <paste your token here>
 
 # Optional but recommended: the expiry date you chose above, as YYYY-MM-DD. Tokens lapse silently --
@@ -55,18 +60,17 @@ AZURE_DEVOPS_PAT = <paste your token here>
 AZURE_DEVOPS_PAT_EXPIRES = <YYYY-MM-DD>
 
 # REQUIRED. Airtable personal access token — create one at https://airtable.com/create/tokens
-#   Scopes: `data.records:read` and `schema.bases:read`.
-#   Access: add the base your 515 tracker lives in (the app... id in AIRTABLE_515_URL).
+#   Scopes: ONLY `data.records:read` and `schema.bases:read` — read-only, no write scopes.
+#   Access: add EXACTLY TWO bases — the 515 weekly tracker base (AIRTABLE_515_URL) and the FY27
+#   Resource Planner base (AIRTABLE_GOALS_URL, if you use goals-summary). Nothing else.
+#   Expiration: choose "No expiration." Unlike the Jira/GitHub tokens above, this one isn't meant
+#   to be rotated on a schedule, so there's no AIRTABLE_API_KEY_EXPIRES key below.
 # Read-only is deliberate: the roll-up drafts a local file and you paste it in yourself, so the
 # token never needs write scope. `schema.bases:read` is what supplies your real field names and the
 # valid select options (e.g. the Goals list) — without it the draft has to guess them and you fix
 # every one by hand. Adding no base under Access is the easy mistake: the token then authenticates
 # fine but returns 404 for the base.
 AIRTABLE_API_KEY = <paste your token here>
-
-# Optional, same as above: the expiry you chose, as YYYY-MM-DD, so the collector can warn you ahead
-# of a silent lapse instead of failing mid-week.
-AIRTABLE_API_KEY_EXPIRES = <YYYY-MM-DD>
 ```
 
 ## Alternatives to this file
@@ -85,6 +89,8 @@ portable choice.
 
 ## Rotating or revoking
 
-Tokens expire — Atlassian defaults to about a year, and GitHub and Airtable tokens carry whatever
-expiry you chose. When one does, the fetch script fails with a clear `HTTP 401`. Create a replacement
+Tokens expire — Atlassian defaults to about a year, and GitHub tokens carry whatever expiry you
+chose. **Airtable is the exception**: set to "No expiration" when created, so it's not expected to
+lapse on its own — revoke and replace it only if it's compromised, not on a schedule. When a token
+does expire, the fetch script fails with a clear `HTTP 401`. Create a replacement
 at the URL above, paste it here, and revoke the old one. Nothing else needs to change.
