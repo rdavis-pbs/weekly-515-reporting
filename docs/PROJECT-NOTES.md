@@ -32,7 +32,7 @@ folder name.
   week that just ended, not the one barely underway. Weeks are Monday-start, so on Sat/Sun "this
   week's Friday" is the Friday just passed. The output folder is always named for this anchor Friday.
   (Before v0.9.0 the cutover was Saturday — Mon–Fri all meant "this week.")
-- **Most collectors use Mon–Fri** (chat, email, calendar, OneNote, git, Claude).
+- **Most collectors use Mon–Fri** (chat, email, calendar, personal notes, git, Claude).
 - **Jira is the exception — it uses a 7-day Friday→Friday window**, ending on the same anchor
   Friday the folder is named for (so folder and Jira window line up). This was a specific request:
   your Jira reporting period is Fri→Fri. Since v0.9.0 the dates are injected into your JQL via
@@ -43,7 +43,14 @@ folder name.
 
 ## Connector strategy (why some sources use the browser)
 
-This was a deliberate design choice, not a limitation to "fix":
+This was a deliberate design choice, not a limitation to "fix". **Every collector is optional, not
+just Azure DevOps** — different people rely on different tools, and a missing config key just
+skips that source rather than erroring or reporting a gap. `shared/work-week.md` (§2c, "Source
+availability") defines the check once, and `run-weekly-515` runs it before every full run,
+reporting two lists to the user: what's configured, and what's available but not set up. This
+replaced an earlier design where Azure DevOps was the only source treated as optional and
+everything else was implicitly assumed to apply to everyone — which stopped being true the moment
+a second colleague with a different toolset started using the plugin.
 
 - **Microsoft 365 connector** (Outlook mail, calendar) — used directly. Already connected.
 - **Microsoft Teams — removed as a source in v0.10.1.** You don't use it. It had been costing every
@@ -80,9 +87,12 @@ This was a deliberate design choice, not a limitation to "fix":
     (`vssps.dev.azure.com/{org}/_apis/profile/profiles/me`) — which only exists on Azure DevOps
     Services (cloud), not reliably on an on-prem Server. `AZURE_DEVOPS_EMAIL` is the escape hatch,
     same idea as `JIRA_EMAIL`.
-- **Slack** — uses Slackbot's built-in weekly summary read through the browser (Claude in Chrome),
-  NOT the Slack connector. Reason: the Slack connector requires enumerating every chat to access,
-  which you didn't want. Slackbot's own recap already covers the workspace.
+- **Slack** (optional) — uses Slackbot's built-in weekly summary, NOT the Slack connector. Reason:
+  the Slack connector requires enumerating every chat to access, which you didn't want. Slackbot's
+  own recap already covers the workspace. **Read by manual paste by default** since v0.13.0: write
+  an `AWAITING INPUT` stub and stop until the user pastes the recap, rather than opening it through
+  the browser — Claude in Chrome is disabled org-wide at PBS, so that path is dormant, not primary.
+  Falls back to a direct browser read if the extension is ever available.
 - **Jira** — read via the **Atlassian Jira Cloud REST API** using a personal API token, driven by
   `scripts/jira_fetch.py` (stdlib only, no pip installs). Switched from the browser in v0.9.0 when
   PBS disabled the Claude-in-Chrome extension. The API path is also strictly better than what the
@@ -113,23 +123,32 @@ This was a deliberate design choice, not a limitation to "fix":
   - **`Record Type`** (`Task`/`Note`/`Gate`/`Decision`) didn't exist in the old FY26 table. A `Note`
     isn't committed work; a `Gate` is a milestone with its own due date. The skill is told to handle
     both distinctly rather than reporting every row as an undifferentiated task.
-- **Airtable** — read via the **Airtable REST API** (`scripts/airtable_fetch.py`, `AIRTABLE_API_KEY`),
-  same stdlib-script pattern as Jira and GitHub. The roll-up reads the last few 515 records to learn
-  the format *and* the table schema, which is the part the connector path never gave us: field types
-  and the valid select options, so a drafted `#N Goals` uses values that actually exist. Records are
-  sorted by the week-ending date field rather than creation time, so a backfilled record can't become
-  the format sample. The **connector** and then the **browser** (`AIRTABLE_515_URL`) remain as
-  fallbacks, in that order — kept for colleagues whose setup differs, though on this machine neither
-  runs (see the Chrome note below), which is what motivated the API move.
+- **Airtable** (required — the one source that isn't optional) — read via the **Airtable REST
+  API** (`scripts/airtable_fetch.py`, `AIRTABLE_API_KEY`), same stdlib-script pattern as Jira and
+  GitHub. The roll-up reads the last few 515 records to learn the format *and* the table schema,
+  which is the part the connector path never gave us: field types and the valid select options, so
+  a drafted `#N Goals` uses values that actually exist. Records are sorted by the week-ending date
+  field rather than creation time, so a backfilled record can't become the format sample. The
+  **connector** and then the **browser** (`AIRTABLE_515_URL`) remain as fallbacks, in that order —
+  kept for colleagues whose setup differs, though on this machine neither runs (the browser one
+  for the same Chrome-disabled reason as Slack above), which is what motivated the API move.
 - **Claude** (`claude-summary`) — three surfaces, mixed access:
   - **Claude Code** is read from **local session transcripts** on disk (`~/.claude/projects/*/*.jsonl`),
     filtered to the Mon–Fri window by each turn's ISO `timestamp` and grouped by the session's `cwd`.
-    No connector or browser — but the sessions must live on the machine the plugin runs on.
-  - **claude.ai chat** is read through the browser. **Cowork** is read from the **desktop app**
-    (its task list / on-disk history) — Cowork is desktop-only and has no browsable web URL.
+    No connector or browser — but the sessions must live on the machine the plugin runs on, **and
+    the plugin itself must be running as a genuine Claude Code session** (CLI, VS Code/JetBrains
+    extension, or the desktop app's own Code surface) to reach them. Running from **Cowork**
+    instead resolves `~/.claude/projects/` to Cowork's own sandboxed, ephemeral home directory, not
+    the real one — same root cause as `config.md`/`credentials.md` needing a connected folder
+    instead of `~`. This surface then comes back not-collected, not "no activity."
+  - **claude.ai chat** is read through the browser, when available. Disabled org-wide at PBS, so
+    this surface is normally marked **not-collected** — distinct from "no activity," since one is a
+    missing read and the other is a finding.
+  - **Cowork** is read from the **desktop app** (its task list / on-disk history) — Cowork is
+    desktop-only and has no browsable web URL.
 
-Browser sources just need you signed in to those sites in Chrome with the Claude in Chrome
-extension connected.
+Browser-fallback sources just need you signed in to those sites in Chrome with the Claude in Chrome
+extension connected and enabled — which it currently isn't, org-wide, at PBS.
 
 ## Config values to set (per skill)
 
@@ -148,8 +167,9 @@ template). Skills read them from there by key.
 | `AZURE_DEVOPS_ORG_URL` | `azure-git-summary` | *optional* — unset skips the collector entirely |
 | `AZURE_DEVOPS_PROJECT` | `azure-git-summary` | *optional* — comma-separated project names to scope to |
 | `AZURE_DEVOPS_EMAIL` | `azure-git-summary` | *optional* — only if profile email resolution fails |
-| `ONENOTE_URL` | `onenote-summary` | your SharePoint Doc.aspx notebook URL |
-| `AIRTABLE_515_URL` | `weekly-515-rollup` | your 515 base/view URL |
+| `NOTES_LOCATION` | `notes-summary` | *optional* — free text naming where you keep notes |
+| `NOTES_URL` | `notes-summary` | *optional* — only if notes live at a browser-openable URL |
+| `AIRTABLE_515_URL` | `weekly-515-rollup` | your 515 base/view URL — **required**, not optional |
 | `OUTPUT_ROOT` | `shared/work-week.md` | *optional* — defaults to the config's own folder |
 
 Secrets live in a sibling file, `<workspace>/.weekly-515-reporting/credentials.md`, holding
@@ -192,12 +212,48 @@ one won had depended on the shell's working directory.
       of the v0.6.0+ config relocation or the v0.9.0 Jira API work is live yet.
 - [x] **Create the GitHub token.** Done — `GITHUB_TOKEN` authenticates as `rdavis-pbs` and returns
       private-repo commits, so the scope is sufficient.
-- [x] **Claude in Chrome is disabled by PBS policy.** Settled in v0.10.1 rather than worked around
-      ad hoc each week: the run writes labeled `AWAITING INPUT` stubs for `chat-summary` (Slack) and
-      `onenote-summary`, then **stops before the roll-up** so the user can paste into them. The
-      claude.ai-chat portion of `claude-summary` is marked not-collected rather than dropped, since
-      "unknown" and "no activity" aren't the same claim. The Claude Code half reads local transcripts
-      and is unaffected. Procedure lives in [WEEKLY-RUN-PLAYBOOK.md](WEEKLY-RUN-PLAYBOOK.md).
+- [x] **Claude in Chrome is disabled by PBS policy.** Settled in v0.10.1 as a local workaround in
+      the playbook, then **promoted to plugin default in v0.13.0** once it was clear the policy is
+      org-wide, not Robert-specific: `chat-summary` and `notes-summary` (renamed from
+      `onenote-summary`, see below) now write labeled `AWAITING INPUT` stubs and stop before the
+      roll-up as their *default* behavior, not a local deviation — every colleague on this plugin
+      hits the same PBS policy. The claude.ai-chat portion of `claude-summary` is marked
+      not-collected rather than dropped, since "unknown" and "no activity" aren't the same claim.
+      The Claude Code half reads local transcripts and is unaffected **by Chrome specifically** —
+      see the next item for a separate caveat on *where* the plugin runs. Robert's own run
+      procedure lives in [WEEKLY-RUN-PLAYBOOK.md](WEEKLY-RUN-PLAYBOOK.md); that file no longer needs
+      to carry the Chrome workaround itself, since the skills do now.
+- [x] **`claude-summary`'s Claude Code surface requires running the plugin from a genuine Claude
+      Code session, not Cowork — confirmed, not hypothetical.** Claude Code writes its transcripts
+      to the real machine's home directory; Cowork tasks run in a sandboxed, ephemeral home (same
+      reason `config.md`/`credentials.md` need a connected folder instead of `~`), so that surface
+      can't be reached from inside Cowork. Robert already runs this workflow from the **Claude Code
+      VS Code extension** (since 2026-10-02, originally for an unrelated reason — Cowork's plugin
+      resync lagged behind his newer local plugin version, the same "Reinstall the plugin" issue
+      above), so his `claude-summary` runs do find real history. The cost: **the VS Code extension
+      has no Microsoft 365 Connectors UI** (confirmed 2026-10-02 — M365 shows connected in Claude
+      Desktop, but not in the extension's settings), so `email-summary`/`calendar-summary` can't run
+      their MCP calls from that same session. Robert bridges those two manually (same pattern as
+      Slack/notes) — see `WEEKLY-RUN-PLAYBOOK.md`. Documented as general guidance for any colleague
+      in README, `COLLEAGUE-SETUP.md`, and `claude-summary/SKILL.md`: running from Code (CLI,
+      VS Code/JetBrains extension, or the desktop app's own Code surface) gets Claude Code history
+      but may cost the Microsoft 365 connector depending on which surface; running from Cowork gets
+      Microsoft 365 for certain but not Claude Code history. Not yet confirmed whether the desktop
+      app's own **Code** surface (as opposed to Cowork, or the VS Code/JetBrains extensions) has the
+      Connectors UI that Cowork has — if it does, that would be the one surface with both.
+- [x] **Every collector made optional, not just Azure DevOps (v0.13.0).** Different colleagues use
+      different tools, so a missing config key now skips a source cleanly instead of being either
+      hardcoded-required or (for everything but Azure DevOps) simply undocumented as skippable.
+      `shared/work-week.md` §2c defines the one availability check; `run-weekly-515` runs it before
+      every full run and reports two lists — configured vs. available-but-unset — so the user sees
+      their own setup without re-deriving it from nine SKILL.md files.
+- [x] **`onenote-summary` renamed `notes-summary` and made tool-agnostic (v0.13.0).** It no longer
+      assumes OneNote, or any particular note-taking tool — it asks the user to paste whatever they
+      jotted down this week, wherever that lives (OneNote, Notepad, Word, a notebook, ...).
+      Robert's own OneNote navigation details (which sections, how dates are written, the
+      `Credentials` page to never open) moved to
+      [WEEKLY-RUN-PLAYBOOK.md](WEEKLY-RUN-PLAYBOOK.md) as a personal note for if/when browser access
+      to it returns, rather than staying hardcoded in a skill meant to work for anyone.
 - [ ] First real run end-to-end: sanity-check each output file, then tune the summary sections/tone
       to match how you actually write your 515.
 - [ ] **Create the Azure DevOps PAT**, if you use Azure DevOps — `AZURE_DEVOPS_ORG_URL` in

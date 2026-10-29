@@ -2,10 +2,10 @@
 name: calendar-summary
 description: >
   Review and summarize the activities described in the user's Outlook calendar events for the
-  current work week (Mon–Fri) and save it as calendar-summary.md in the weekly 515 folder. Use
-  whenever the user wants their weekly meetings/calendar captured for their 515 report, asks "what
-  meetings did I have this week", or runs the weekly 515 workflow. Part of the weekly-515-reporting
-  plugin.
+  current work week (Mon–Fri) and save it as calendar-summary.md in the weekly 515 folder. Optional
+  — skipped automatically if the Microsoft 365 connector isn't authorized. Use whenever the user
+  wants their weekly meetings/calendar captured for their 515 report, asks "what meetings did I
+  have this week", or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
 ---
 
 # Calendar summary (Outlook)

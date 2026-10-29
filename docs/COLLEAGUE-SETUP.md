@@ -1,22 +1,47 @@
 # Setup guide (for colleagues)
 
-This plugin assembles your weekly **515** report by gathering a week's work activity from chat,
-email, calendar, OneNote, GitHub, Azure DevOps, Jira, and Claude, then distilling it into a
-proposed 515 entry. It runs in the **Claude desktop app (Cowork)**. Follow these steps once to get
-set up.
+This plugin assembles your weekly **515** report by gathering a week's work activity from
+whichever sources you actually use — chat, email, calendar, personal notes, GitHub, Azure DevOps,
+Jira, and Claude — then distilling it into a proposed 515 entry. It runs in the **Claude desktop
+app (Cowork)**. Follow these steps once to get set up.
+
+> **If you use Claude Code and want that session history in your 515, run from Code, not
+> Cowork — but know the tradeoff.** Cowork tasks execute in a separate sandboxed, ephemeral home
+> directory, so the `claude-summary` collector can't see your real `~/.claude/projects/`
+> transcripts from inside a Cowork task — only from a genuine Claude Code session (the CLI, the
+> VS Code/JetBrains extension, or the desktop app's own **Code** surface). Jira, GitHub, Azure
+> DevOps, and Airtable work the same either way (plain REST API calls, no connector). **Microsoft
+> 365 is where it gets uneven: the VS Code extension has no Connectors UI at all**, so
+> `email-summary`/`calendar-summary` can't run from that surface — you'd paste those in manually
+> instead, the same way Slack and personal notes already work. Whether the desktop app's own Code
+> surface keeps Microsoft 365 connected (since it's the same app as Cowork) isn't confirmed yet —
+> if you try it, that's worth telling us either way. See Step 5 for more.
+
+**Every source is optional except Airtable.** Nobody has to set up all of them — different people
+rely on different tools. Set up only the sources that apply to you; anything you skip is left out
+of the run automatically, with no error and no coverage gap reported. `run-weekly-515` tells you,
+at the start of every run, which sources are configured and which are available but not set up
+yet, so you always know what's included.
 
 ## Prerequisites
 
 - The **Claude desktop app** with Cowork.
-- A **Microsoft 365** account (Outlook mail/calendar, Teams) connected in Claude.
-- An **Atlassian API token** (`jira-summary`), a **GitHub token** (`git-summary`), an **Airtable
-  personal access token** (`weekly-515-rollup`) — Step 3. All read-only. An **Azure DevOps personal
-  access token** (`azure-git-summary`) too, if you use Azure DevOps — it's the one optional source.
-- **Python 3** on the machine you run this from, for the Jira, GitHub, Azure DevOps, and Airtable
-  fetch scripts. Any recent version works; no packages to install. Already present on most machines.
-- **Claude in Chrome** (the browser extension) for the sources still read through the browser:
-  Slack, OneNote, and claude.ai chat — be signed in to each in Chrome. Jira, GitHub, and Azure
-  DevOps no longer need the browser.
+- An **Airtable personal access token** (`weekly-515-rollup`) — Step 3. **This is the one
+  requirement**; without it there's no 515 format to draft into. Everything else below is only
+  needed for the specific sources you want captured.
+- A **Microsoft 365** account (Outlook mail/calendar) connected in Claude — only if you want
+  `email-summary`/`calendar-summary`. The connector shows up in Cowork and Claude Desktop; the
+  VS Code/JetBrains Claude Code extensions have no Connectors UI, so running from one of those
+  means pasting email/calendar in manually instead — see the note below.
+- An **Atlassian API token** (`jira-summary`) — only if you use Jira.
+- A **GitHub token** (`git-summary`) — only if you use GitHub.
+- An **Azure DevOps personal access token** (`azure-git-summary`) — only if you use Azure DevOps.
+- **Python 3** on the machine you run this from, for whichever of the Jira, GitHub, Azure DevOps,
+  and Airtable fetch scripts you actually use. Any recent version works; no packages to install.
+  Already present on most machines. Needed for Airtable regardless, since that one's required.
+- **Claude in Chrome** (the browser extension), only as a fallback. At PBS, this extension is
+  **disabled org-wide**, so Slack and personal notes default to a manual-paste workflow instead —
+  see Step 4. Jira, GitHub, Azure DevOps, and the Microsoft 365 sources never needed the browser.
 
 ## Step 1 — Install the plugin from the marketplace
 
@@ -53,19 +78,27 @@ Set it up once:
    `<your folder>/.weekly-515-reporting/config.md` yourself.
 3. Fill in **your own** values:
 
+Every key below is **optional** except `AIRTABLE_515_URL` — only fill in the ones for sources you
+actually use. Leaving the rest commented out just means that collector is skipped.
+
 ```
-# Your Slack workspace/channel URL (chat-summary opens this in the browser)
+# OPTIONAL. Your Slack workspace/channel URL (chat-summary points you here to run your saved
+# recap skill and paste the result). Omit it entirely if you don't use Slack.
 SLACK_URL        = https://app.slack.com/client/TXXXXXXXX/CXXXXXXXX
 
-# Your Atlassian site and account email (jira-summary reads these; the token goes in
-# credentials.md, NOT here — see Step 3)
+# OPTIONAL, both keys. Your Atlassian site and account email (jira-summary reads these; the token
+# goes in credentials.md, NOT here — see Step 3). Omit both if you don't use Jira.
 JIRA_SITE        = yourorg.atlassian.net
 JIRA_EMAIL       = you@example.com
 
-# Your SharePoint/OneDrive-hosted OneNote notebook URL (onenote-summary reads this)
-ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
+# OPTIONAL, both keys. Personal notes, any tool — OneNote, Notepad, Word, a notebook, whatever you
+# actually use (notes-summary reads these). NOTES_LOCATION is just free text to make the paste
+# prompt specific; omit both and it asks you directly each run.
+# NOTES_LOCATION = <e.g. "OneNote" or "Notepad file on my desktop">
+# NOTES_URL      = <only if your notes live somewhere a browser could open directly>
 
-# Your Airtable 515 base/view URL (weekly-515-rollup reads this; token goes in credentials.md)
+# REQUIRED. Your Airtable 515 base/view URL (weekly-515-rollup reads this; token goes in
+# credentials.md). This is the one source that isn't optional.
 AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 
 # OPTIONAL — your Azure DevOps organization, if you use it alongside or instead of GitHub
@@ -85,8 +118,9 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 - `JIRA_SITE` — the host part of any Jira URL, e.g. `yourorg.atlassian.net`.
 - `JIRA_EMAIL` — the email address on your Atlassian account (must be the account that creates the
   API token in Step 3).
-- `ONENOTE_URL` — open your OneNote notebook in the browser (SharePoint/OneDrive) and copy the
-  `Doc.aspx?...` URL.
+- `NOTES_LOCATION` / `NOTES_URL` — optional. A short reminder of where you keep notes (free text),
+  and, only if applicable, a browser-openable URL for them. See Step 4 for why most people at PBS
+  leave `NOTES_URL` unset.
 - `AIRTABLE_515_URL` — open your 515 base/view in Airtable and copy the whole address bar (trailing
   query junk like `?blocks=hide` is ignored). Prefer **your own** filtered view over a team-wide one.
 - `AIRTABLE_GOALS_URL` — optional. Your personal view of your team's FY goals/tasks resource tracker.
@@ -101,25 +135,25 @@ AIRTABLE_515_URL = https://airtable.com/appXXXX/tblYYYY/viwZZZZ
 - `OUTPUT_ROOT` — optional; leave it commented out and reports go into the connected folder your
   config lives in (`<that folder>/<FRIDAY>/`). Set it only to write reports somewhere else.
 
-> Note: `onenote-summary` assumes a particular note structure (dates written inside page bodies,
-> a main journal section). If your notes are organized differently, tell Claude how yours are laid
-> out when you run it, or skip that collector.
+> Note: `notes-summary` doesn't assume any particular note-taking tool or structure — it just asks
+> you to paste the week's entries. If you want it to prompt more specifically (e.g. naming your
+> OneNote section), set `NOTES_LOCATION`.
 
-## Step 3 — API tokens (required for `jira-summary`, `git-summary`, `azure-git-summary` if used, and `weekly-515-rollup`)
+## Step 3 — API tokens (only for the sources you use — `AIRTABLE_API_KEY` is the one required token)
 
 These read through REST APIs rather than the browser, so each needs a personal token. Tokens
 inherit **your own** permissions — they can only see what you can already see, and the plugin only
-ever reads. All three go in the same file:
+ever reads. Add only the ones for sources you actually use; all go in the same file:
 
 ```
 <your connected folder>/.weekly-515-reporting/credentials.md
 ```
 
 ```
-JIRA_API_TOKEN   = <paste>
-GITHUB_TOKEN     = <paste>
+JIRA_API_TOKEN   = <paste>   # only if you use Jira
+GITHUB_TOKEN     = <paste>   # only if you use GitHub
 AZURE_DEVOPS_PAT = <paste>   # only if you set AZURE_DEVOPS_ORG_URL in config.md
-AIRTABLE_API_KEY = <paste>
+AIRTABLE_API_KEY = <paste>   # required — there's no 515 format to draft into without it
 ```
 
 The template is `shared/credentials.example.md`. Treat this file like a password file — it stays
@@ -232,39 +266,48 @@ into `credentials.md`, and revoke the old one. If you record the expiry date alo
 `JIRA_API_TOKEN_EXPIRES`, `AZURE_DEVOPS_PAT_EXPIRES`, `AIRTABLE_API_KEY_EXPIRES` — the collector
 warns you for the three weeks beforehand instead of failing mid-week.
 
-## Step 4 — Browser access (Claude in Chrome)
+## Step 4 — Slack and personal notes (manual paste, by default)
 
-The remaining browser-based collectors (Slack, OneNote, claude.ai chat) open pages via the
-Claude-in-Chrome extension. Make sure you're already signed in to each service in Chrome before you
-run the workflow.
+**Claude in Chrome is disabled org-wide at PBS**, so `chat-summary` and `notes-summary` don't try
+to open anything in a browser. Instead, each writes a stub file labeled `Status: AWAITING INPUT`
+and the run pauses there:
 
-> If your organization has **disabled** the Claude-in-Chrome extension, these collectors can't run.
-> Jira, GitHub, Azure DevOps, and the Microsoft 365 sources (mail, calendar, Teams) all still work,
-> since none of them uses the browser. For the rest, paste the material in yourself and ask Claude
-> to write that collector's file, or skip it — the roll-up works from whatever files are present.
+- **Slack** — open your saved **"Weekly Activity Summary"** skill (or whatever recap you use) in
+  Slack yourself, run it, and paste the reply into the stub when Claude asks.
+- **Personal notes** — open wherever you keep notes yourself (OneNote, Notepad, Word, a notebook,
+  whatever) and paste the week's entries into the stub when Claude asks.
 
-Under PBS enterprise policy, the extension's per-site **"Always allow"** option is **not available**.
-Instead, use the **plan-approval** flow:
+A raw paste is fine for both — no cleanup needed. `run-weekly-515` won't draft the final roll-up
+until both stubs (for whichever of the two you actually use) are filled; if you don't use one of
+them, say so and that collector is skipped instead of stubbed.
 
-1. When you kick off a skill, Claude proposes a **plan** of the browser actions it intends to take —
-   which sites it will open and read.
-2. **Review the plan** and **approve** it. Approving authorizes the browser actions for that run.
-3. Claude then works through the sites in the plan. If it needs to do something outside the approved
-   plan, it will pause and ask again — review and approve as needed.
+Jira, GitHub, Azure DevOps, and the Microsoft 365 sources (mail, calendar) all still work normally
+— none of them has ever used the browser.
 
-You approve the plan **per run** rather than granting standing per-site access. This keeps browsing
-within enterprise policy while still letting the workflow read the sources it needs.
-
-> This is the approach that works under our enterprise rules; if your team's policy differs, follow
-> whatever your admin has set for the Claude-in-Chrome extension.
+> **If your organization has since re-enabled Claude in Chrome**, both collectors can read their
+> source directly instead of asking for a paste — see the SKILL.md files if you want to switch.
+> Under PBS enterprise policy when the extension *was* available, its per-site **"Always allow"**
+> option wasn't available either; Claude would instead propose a **plan** of the sites it intended
+> to open, you'd review and approve it per run, and it would stop and ask again for anything
+> outside that plan. That flow only applies if the extension is enabled — it is not currently, so
+> the manual-paste path above is what you'll actually use.
 
 ## Step 5 — Run it
 
-- **Whole workflow (Fridays):** run `run-weekly-515` — it collects every source and produces the
-  proposed 515 entry. Just ask: *"run my weekly 515."*
+- **Whole workflow (Fridays):** run `run-weekly-515` — it reports which of your configured sources
+  it's collecting, runs each, then produces the proposed 515 entry. Just ask: *"run my weekly 515."*
 - **A single source:** run any one skill on its own, e.g. `jira-summary`, `chat-summary`,
-  `email-summary`, `calendar-summary`, `onenote-summary`, `git-summary`, `azure-git-summary`,
+  `email-summary`, `calendar-summary`, `notes-summary`, `git-summary`, `azure-git-summary`,
   `claude-summary`, or `weekly-515-rollup`.
+- **Just want to see what's configured?** Ask *"what sources do I have set up for my 515?"* — the
+  same check `run-weekly-515` does at the start of every run.
+- **Where to run it, if you use Claude Code:** run from a genuine Claude Code session — the CLI,
+  the VS Code/JetBrains extension, or the desktop app's own **Code** surface — rather than Cowork,
+  so `claude-summary` can see your real `~/.claude/projects/` transcripts. Run from Cowork and that
+  one surface comes back not-collected instead. Trade-off: the VS Code/JetBrains extensions have no
+  Microsoft 365 Connectors UI, so if you run from one of those, paste `email-summary`/
+  `calendar-summary` in manually instead of relying on the connector — see the note near the top of
+  this guide.
 
 **The week & output folder:** everything targets one **Mon–Fri** work week, anchored to a Friday,
 with the cutover on **Wednesday**:
@@ -292,9 +335,17 @@ that same anchor Friday, so its window lines up with the folder.
   sandbox's own home directory (`~`) is wiped after each remote session, so a config left there
   won't be found next time — the connected folder is what persists.
 - **`claude-summary` reads local Claude Code transcripts** from `~/.claude/projects/` on the machine
-  you run it on — so run it on the machine where you actually use Claude Code.
-- **A source can be skipped.** If a connector isn't authorized or a URL isn't set, that collector
-  notes it was unavailable and the rest still run.
+  you run it on — so run it on the machine where you actually use Claude Code. **If you use Claude
+  Code, run the plugin from a genuine Claude Code session** — the CLI in a terminal, the VS Code or
+  JetBrains extension, or the desktop app's own **Code** surface — **not from Cowork**, to have
+  that session history included in the roll-up. Cowork tasks run in a separate sandboxed, ephemeral
+  home directory, so `~/.claude/projects/` resolves to Cowork's own (empty) copy rather than your
+  real history when run that way; the Claude Code surface then comes back not-collected instead of
+  showing your actual sessions.
+- **Every source can be skipped — that's the normal case, not an error.** If a connector isn't
+  authorized or a key isn't set in `config.md`/`credentials.md`, that collector is simply left out
+  and the rest still run. `run-weekly-515` lists what's configured vs. not set up before it runs
+  anything, so you don't have to remember your own setup.
 - **Nothing writes back to your systems.** The Jira, GitHub, Azure DevOps, and Airtable API calls
   and the browser collectors only read; the roll-up writes a local draft file — you paste it into
   Airtable yourself after reviewing. None of the tokens needs write scope.

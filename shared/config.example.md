@@ -12,12 +12,15 @@ values reads it from `<your folder>/.weekly-515-reporting/config.md` by key. Eas
 any skill and let first-run setup create it for you.
 
 ```
-# Slack workspace/channel URL (chat-summary opens this in the browser)
+# OPTIONAL. Slack workspace/channel URL (chat-summary points you here to run your saved recap
+# skill and paste the result -- Claude in Chrome is disabled org-wide at PBS, so this isn't opened
+# automatically). Omit the key entirely if you don't use Slack; that collector is skipped.
 SLACK_URL        = <your Slack URL, e.g. https://app.slack.com/client/TXXXXXXXX/CXXXXXXXX>
 
-# --- Jira (jira-summary reads these via the Atlassian REST API) ---
+# --- Jira (jira-summary reads these via the Atlassian REST API) --- OPTIONAL, all of it.
 # Your Atlassian Cloud site host, and the account email that owns the API token.
 # The token itself goes in credentials.md, NOT here — see shared/credentials.example.md.
+# Leave both keys out entirely if you don't use Jira; that collector is skipped.
 JIRA_SITE        = <your Atlassian host, e.g. yourorg.atlassian.net>
 JIRA_EMAIL       = <the email on your Atlassian account, e.g. you@example.com>
 
@@ -35,10 +38,15 @@ JIRA_EMAIL       = <the email on your Atlassian account, e.g. you@example.com>
 # OPTIONAL. Only a convenience link for humans now — the API path does not read it.
 # JIRA_FILTER_URL = <your Jira saved-filter URL, e.g. https://yourorg.atlassian.net/issues/?filter=NNNNN>
 
-# SharePoint/OneDrive-hosted OneNote notebook URL (onenote-summary reads this)
-ONENOTE_URL      = <your OneNote Doc.aspx URL from SharePoint/OneDrive>
+# --- Personal notes (notes-summary) --- OPTIONAL, both keys. Tool-agnostic: OneNote, Notepad,
+# Word, a notebook, whatever you actually use. Omit both and the skill just asks you directly each
+# run; omit NOTES_URL regardless, since it only matters if your notes live somewhere a browser
+# could open directly AND Claude in Chrome is available (it's disabled org-wide at PBS).
+# NOTES_LOCATION = <free text, e.g. "OneNote, BI Tech Group -> Journal 2026", or "Notepad on my desktop">
+# NOTES_URL      = <a browser-openable URL for your notes, only if applicable>
 
-# --- Airtable (weekly-515-rollup reads this via the Airtable REST API) ---
+# --- Airtable (weekly-515-rollup reads this via the Airtable REST API) --- REQUIRED.
+# This is the one source that isn't optional: without it there's no 515 format to draft into.
 # Open your 515 table in the browser and paste the whole address bar; the base (app...), table
 # (tbl...) and view (viw...) ids are read out of it, and trailing query junk like ?blocks=hide is
 # ignored. Point it at YOUR OWN view if the table holds the whole team's entries -- the collector
@@ -60,10 +68,11 @@ AIRTABLE_515_URL = <your 515 base/view URL, e.g. https://airtable.com/appXXXX/tb
 # OPTIONAL. Only for GitHub Enterprise Server. Defaults to github.com.
 # GITHUB_HOST    = <your GitHub host, e.g. github.mycompany.com>
 
-# --- Azure DevOps (azure-git-summary reads these via the Azure DevOps REST API) ---
+# --- Azure DevOps (azure-git-summary reads these via the Azure DevOps REST API) --- OPTIONAL.
 # Your Azure DevOps organization URL. A PAT is scoped to one org, so only this org is covered —
-# if your work spans more than one, pick the one that matters most for your 515.
-AZURE_DEVOPS_ORG_URL = <your org URL, e.g. https://dev.azure.com/yourorg>
+# if your work spans more than one, pick the one that matters most for your 515. Leave this out
+# entirely if you don't use Azure DevOps; that collector is skipped.
+# AZURE_DEVOPS_ORG_URL = <your org URL, e.g. https://dev.azure.com/yourorg>
 
 # OPTIONAL. Comma-separated project names to scope the scan to. Omit to scan every project the
 # PAT can see (slower on a large org, but nothing is missed by a typo'd project name).

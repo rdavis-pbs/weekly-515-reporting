@@ -57,13 +57,14 @@ Use the Write tool to create files there — it creates the dated subfolder auto
 does not exist. (In a Cowork sandbox the shell sees this folder under `$HOME/mnt/<name>/` while your
 file tools address the same folder by its real machine path; use whichever matches the tool you're
 calling — the harness maps between them.) Each collector skill writes exactly one file named after
-itself (`chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `onenote-summary.md`,
+itself (`chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `notes-summary.md`,
 `git-summary.md`). The roll-up writes `proposed 515 accomplishments.md` into the same folder.
 
 ## 2b. Config location (persistent, portable across Windows / macOS / Cowork)
 
-All person-specific values (`SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_JQL`, `ONENOTE_URL`,
-`AIRTABLE_515_URL`, and optionally `OUTPUT_ROOT`) live in **one** file inside a folder you control:
+All person-specific values (`SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_JQL`, `NOTES_LOCATION`,
+`NOTES_URL`, `AIRTABLE_515_URL`, and optionally `OUTPUT_ROOT`) live in **one** file inside a folder
+you control:
 
 ```
 <WORKSPACE>/.weekly-515-reporting/config.md
@@ -114,6 +115,38 @@ parent of `.weekly-515-reporting`) is the default output folder unless `OUTPUT_R
 3. Create `<chosen folder>/.weekly-515-reporting/config.md` from the template
    `${CLAUDE_PLUGIN_ROOT}/shared/config.example.md`, prompt for the user's real values, and write it.
    It will be found automatically on every later run.
+
+## 2c. Source availability (every collector is optional)
+
+Nobody has to set up every source — people use different tools. Before running the full workflow
+(`run-weekly-515`), work out which collectors have what they need and tell the user, as two short
+lists, so they always know what ran this week and what they could add:
+
+| Source (skill) | Needs | Where |
+|---|---|---|
+| Slack (`chat-summary`) | `SLACK_URL` | `config.md` |
+| Personal notes (`notes-summary`) | nothing required — asks directly if `NOTES_LOCATION`/`NOTES_URL` aren't set | `config.md` (optional) |
+| GitHub (`git-summary`) | `GITHUB_TOKEN` | `credentials.md` |
+| Azure DevOps (`azure-git-summary`) | `AZURE_DEVOPS_ORG_URL` + `AZURE_DEVOPS_PAT` | `config.md` + `credentials.md` |
+| Jira (`jira-summary`) | `JIRA_SITE` + `JIRA_EMAIL` + `JIRA_API_TOKEN` | `config.md` + `credentials.md` |
+| Outlook mail (`email-summary`) | Microsoft 365 connector authorized — not available from the VS Code/JetBrains Claude Code extensions, which have no Connectors UI | Cowork/Claude connector settings |
+| Outlook calendar (`calendar-summary`) | Microsoft 365 connector authorized — same VS Code/JetBrains caveat as above | Cowork/Claude connector settings |
+| Claude Code / Cowork (`claude-summary`) | nothing to configure, but the Claude Code surface only finds data when *this run itself* is a genuine Claude Code session (CLI, VS Code/JetBrains extension, or the desktop app's Code surface) — not Cowork, whose sandboxed home directory hides the real `~/.claude/projects/` | — |
+| FY goals (`goals-summary`) | `AIRTABLE_GOALS_URL` | `config.md` |
+| 515 format (`weekly-515-rollup`) | `AIRTABLE_515_URL` — **required, not optional**; there's no 515 format to draft into without it | `config.md` |
+
+To check: read `config.md` and `credentials.md` for **key presence only — never print a value**
+(grep for `^KEY *=` rather than echoing the matched line), and note whether the Microsoft 365
+connector tools are callable. Report the result before running anything, e.g.:
+
+```
+Configured this run: Jira, GitHub, Outlook mail, Outlook calendar, Claude Code
+Not set up (skipped — add to config.md / credentials.md to enable): Slack, Azure DevOps, personal notes, FY goals
+```
+
+Then **skip calling a collector entirely when its source isn't configured** — don't invoke it and
+let it fail. Note it as "not set up" in the same breath you'd otherwise report "no activity this
+week," since those are different claims: one is a choice, the other is a finding.
 
 ## 3. Output file convention
 

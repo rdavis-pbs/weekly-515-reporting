@@ -4,9 +4,10 @@ description: >
   Summarize the user's GitHub activity — commits, pull requests, reviews, and issues — for the
   current work week (Mon–Fri) and save it as git-summary.md in the weekly 515 folder. Pulls activity
   across all repos from the GitHub REST API with the user's own token — no browser and no GitHub
-  connector required. Use whenever the user wants their weekly code/repo activity captured for their
-  515 report, asks "what did I ship this week", "summarize my commits/PRs", or runs the weekly 515
-  workflow. Part of the weekly-515-reporting plugin.
+  connector required. Optional — skipped automatically if `GITHUB_TOKEN` isn't configured. Use
+  whenever the user wants their weekly code/repo activity captured for their 515 report, asks
+  "what did I ship this week", "summarize my commits/PRs", or runs the weekly 515 workflow. Part of
+  the weekly-515-reporting plugin.
 ---
 
 # Git summary (GitHub REST API)

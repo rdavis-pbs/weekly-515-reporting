@@ -15,8 +15,13 @@ its contents.
 > keys into an AI tool's context is against policy at many organizations (PBS included) — treat
 > that as true by default even where it isn't stated outright.
 
+Every token below is **optional** — only add the ones for sources you actually use. Leaving one
+out just means that collector is skipped (no error); see the **Source availability** section of
+`shared/work-week.md` for how that's surfaced each run. `AIRTABLE_API_KEY` near the bottom is the
+one exception — it's required, since the roll-up has no 515 format to draft into without it.
+
 ```
-# Atlassian API token — create one at:
+# OPTIONAL — only if you use Jira. Atlassian API token — create one at:
 #   https://id.atlassian.com/manage-profile/security/api-tokens
 # "Create API token" is enough; the token inherits your own Jira permissions, so it can only see
 # what you can see. A scoped token also works if you prefer — it needs `read:jira-work` and
@@ -28,7 +33,8 @@ JIRA_API_TOKEN = <paste your token here>
 # jira_fetch.py warn you in the 21 days beforehand. Omit it and the check just stays quiet.
 JIRA_API_TOKEN_EXPIRES = <YYYY-MM-DD>
 
-# GitHub personal access token — create one at https://github.com/settings/tokens
+# OPTIONAL — only if you use GitHub. Personal access token — create one at
+# https://github.com/settings/tokens
 #   Classic token:      tick `repo` and `read:org`.
 #   Fine-grained token: read-only Contents, Pull requests, Issues, and Metadata on the
 #                       repos/orgs you work in.
@@ -36,7 +42,7 @@ JIRA_API_TOKEN_EXPIRES = <YYYY-MM-DD>
 # weekly summary silently shows only your public work, which usually looks like "no activity."
 GITHUB_TOKEN = <paste your token here>
 
-# Azure DevOps personal access token — create one at:
+# OPTIONAL — only if you use Azure DevOps. Personal access token — create one at:
 #   https://dev.azure.com/{org}/_usersSettings/tokens
 # Scope: Code (Read) is enough for commits, PRs, and reviews. It inherits your own project
 # permissions, so a PAT missing Code (Read) on a project simply doesn't see that project's repos —
@@ -48,7 +54,7 @@ AZURE_DEVOPS_PAT = <paste your token here>
 # warning as the other tokens below.
 AZURE_DEVOPS_PAT_EXPIRES = <YYYY-MM-DD>
 
-# Airtable personal access token — create one at https://airtable.com/create/tokens
+# REQUIRED. Airtable personal access token — create one at https://airtable.com/create/tokens
 #   Scopes: `data.records:read` and `schema.bases:read`.
 #   Access: add the base your 515 tracker lives in (the app... id in AIRTABLE_515_URL).
 # Read-only is deliberate: the roll-up drafts a local file and you paste it in yourself, so the

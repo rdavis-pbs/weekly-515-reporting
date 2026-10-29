@@ -2,6 +2,47 @@
 
 All notable changes to the weekly-515-reporting plugin.
 
+## 0.13.0
+- **Every collector is now optional, not just `azure-git-summary`.** Different colleagues rely on
+  different tools, so a missing config key now cleanly skips the source it belongs to, with no
+  error and no coverage gap reported — the treatment `azure-git-summary` already got, generalized.
+  `shared/work-week.md` gained a new "Source availability" section (§2c) defining the one check;
+  `run-weekly-515` runs it before every full run and reports two short lists to the user —
+  configured this run, and available but not set up — so nobody has to remember or re-derive their
+  own setup. `AIRTABLE_515_URL` remains the one required value, since there's no 515 format to draft
+  into without it.
+- **`chat-summary` and `onenote-summary` now default to manual paste, not the browser.** PBS
+  disabling Claude in Chrome was previously handled as a local workaround recorded only in
+  `docs/WEEKLY-RUN-PLAYBOOK.md` (Robert's own playbook, v0.10.1). Since the policy is org-wide, not
+  machine-specific, both skills now write their `AWAITING INPUT` stub and stop as the *default*
+  behavior for every colleague on this plugin, falling back to a direct browser read only if that
+  extension is ever available again. `claude-summary`'s claude.ai-chat surface is marked
+  **not-collected** the same way when the browser isn't available, rather than silently omitted.
+- **`onenote-summary` renamed `notes-summary` and made tool-agnostic.** It no longer assumes
+  OneNote, or any particular note-taking tool, or the specific section/page structure a previous
+  version of this skill hardcoded — it just asks the user to paste whatever personal notes they
+  kept this week, wherever that lives (OneNote, Notepad, Word, a notebook, Apple Notes, ...). New
+  optional config keys `NOTES_LOCATION` (free text, makes the paste prompt specific) and
+  `NOTES_URL` (only for a browser-openable source, only useful if the browser fallback applies)
+  replace `ONENOTE_URL`. Output file is now `notes-summary.md`.
+- `docs/COLLEAGUE-SETUP.md` and `README.md` rewritten around "every source but Airtable is
+  optional" and the Chrome-disabled manual-paste default, instead of presenting the browser as the
+  primary path with disablement as an edge case.
+- **Documented that `claude-summary`'s Claude Code surface requires running the plugin from a
+  genuine Claude Code session, not Cowork.** Claude Code writes its transcripts to the real
+  machine's home directory; Cowork tasks execute in a separate sandboxed, ephemeral home (the same
+  reason `config.md`/`credentials.md` need a connected folder instead of `~`), so `claude-summary`
+  run from inside a Cowork task can't see `~/.claude/projects/` and should mark that surface
+  not-collected rather than "no activity." Running from the CLI, the VS Code/JetBrains extension, or
+  the desktop app's own Code surface all work the same way — it's Code vs. Cowork that matters, not
+  which IDE. Robert himself already runs this way (confirmed, not hypothetical): he's been on the
+  Claude Code VS Code extension since 2026-10-02, for an unrelated reason. **That surfaces a
+  trade-off worth documenting everywhere this is mentioned: the VS Code/JetBrains extensions have
+  no Microsoft 365 Connectors UI at all**, so `email-summary`/`calendar-summary` can't run from that
+  same session — Robert bridges those two manually, the same pattern as Slack/notes. Whether the
+  desktop app's own Code surface (distinct from both Cowork and the IDE extensions) keeps the
+  Microsoft 365 connector too is not yet confirmed.
+
 ## 0.12.0
 - **`goals-summary` moves to the FY27 Resource Planner base**, which splits the old single
   FY26 Tasks table into three tabs: Goals (department goal taxonomy), Metrics (team-wide

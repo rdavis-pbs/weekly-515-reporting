@@ -4,9 +4,27 @@ The standing procedure for Robert's Friday 515 run. Read **this** first, then on
 files for the steps you actually execute — the point of this file is that you don't have to
 re-derive the workflow from nine skills every week.
 
-`run-weekly-515` is the generic orchestrator. This playbook is the local reality it runs into:
-two of its eight collectors can't execute at PBS, and one source isn't used at all. Everything
-below is date-agnostic — substitute the `<FRIDAY>`, `<MONDAY>`, `<LABEL>` you compute in step 1.
+`run-weekly-515` is the generic orchestrator, and as of v0.13.0 its defaults already cover most of
+what used to be recorded here as a local deviation: every collector is optional and the orchestrator
+reports what's configured before it runs anything (`shared/work-week.md` §2c), and `chat-summary` /
+`notes-summary` default to a manual-paste stub with a hard checkpoint before the roll-up, since
+Claude in Chrome is disabled **org-wide** at PBS, not just on this machine. What's left below is
+genuinely **Robert-specific**: preferences and local facts the generic skills can't know on their
+own. Everything else below is date-agnostic — substitute the `<FRIDAY>`, `<MONDAY>`, `<LABEL>` you
+compute in step 1.
+
+> **Resolved, not an open question: Robert runs this workflow from Claude Code (the VS Code
+> extension), not Cowork.** He switched as of 2026-10-02 — originally for an unrelated reason
+> (Cowork's plugin resync lagged behind his newer local plugin version, see `PROJECT-NOTES.md`),
+> but the side effect is favorable here: Claude Code writes transcripts to the real machine's home
+> directory, so `claude-summary`'s Claude Code surface genuinely finds his real
+> `~/.claude/projects/` history when run this way. The tradeoff he's accepted in exchange: **the
+> VS Code extension has no Microsoft 365 connector surface at all** (confirmed 2026-10-02 — M365
+> shows connected in Claude Desktop, but the extension's settings have no Connectors UI), so
+> `email-summary`/`calendar-summary` can't make their M365 calls from inside this same session. He
+> bridges those two the same way as Slack and personal notes: run them from Cowork/Claude Desktop
+> separately, then paste the result into `email-summary.md`/`calendar-summary.md`. See the
+> deviations table and Run order below.
 
 ---
 
@@ -15,13 +33,15 @@ below is date-agnostic — substitute the `<FRIDAY>`, `<MONDAY>`, `<LABEL>` you 
 | Deviation | Why |
 |---|---|
 | **Teams is not a source.** Never collect it, never list it as a gap. | Robert doesn't use Teams. Before this was settled, two consecutive runs spent their time on Graph `chat_message_search` and then reported "0 of 38 chats, HTTP 429" as a coverage hole — a gap that was never real. |
-| **Slack and OneNote are user-pasted stubs, not collector output.** Write a labeled stub, then **stop** — see the checkpoint below. | Both skills read through Claude in Chrome, which PBS has disabled outright. There is no API path for either. |
-| **For Slack, name the saved skill — don't compose a prompt.** Robert maintains a Slack skill called **"Weekly Activity Summary"**; he runs it and pastes the output. | He set it up so he doesn't have to be handed a fresh prompt every week. A hand-built prompt would also drift from the one he actually maintains. |
-| **Hard checkpoint before the roll-up.** Do not run `weekly-515-rollup` in the same turn as the collectors. | Slack and OneNote are consistently two of the richest sources. Drafting before they're populated produces a draft that gets thrown away. |
-| **`claude-summary` runs the Claude Code surface only.** Mark claude.ai and Cowork as "not collected — treat as unknown rather than empty." | claude.ai needs the disabled browser; Cowork keeps no on-disk task history to read. Note them explicitly — never drop them silently, and never write them up as "no activity." |
+| **For Slack, name the saved skill — don't compose a prompt.** Robert maintains a Slack skill called **"Weekly Activity Summary"**; he runs it and pastes the output. | He set it up so he doesn't have to be handed a fresh prompt every week. A hand-built prompt would also drift from the one he actually maintains. (`chat-summary`'s SKILL.md already prefers this; recorded here too since it's the kind of personal fact this file exists for.) |
+| **For personal notes, prompt toward OneNote specifically** — see "Where Robert's notes live" below — rather than asking a fully generic "where do you keep notes?" question. | Robert's actual note-taking tool, kept here as a `NOTES_LOCATION`-equivalent since it's detailed enough that it's easier to read here than type into `config.md` every time. |
+| **`claude-summary`'s Cowork surface has nothing to read on this machine.** Mark it "not collected — treat as unknown rather than empty," same treatment as claude.ai. | Cowork keeps no on-disk task history to read here. Note it explicitly — never drop it silently, and never write it up as "no activity." |
+| **`email-summary` and `calendar-summary` are user-pasted stubs too, like Slack and notes.** Run them from Cowork/Claude Desktop separately, then paste the result in — don't attempt `outlook_email_search`/`outlook_calendar_search` directly in this turn. | This run happens from the Claude Code VS Code extension (see above), which has no Microsoft 365 Connectors UI at all — confirmed 2026-10-02, not a policy change or revoked auth, just a surface gap. Re-check if VS Code-extension connector support ever ships. |
 | **Use `python`, never `python3`.** | On this Windows box `python3` is a Microsoft Store stub that prints "Python was not found" and exits 0. That is *not* an empty result. |
 
-Everything else follows the stock skills unchanged.
+Everything else follows the stock skills unchanged — including the manual-paste default for Slack
+and personal notes, and the checkpoint before the roll-up, which are now baked into those skills
+directly rather than recorded here as a deviation.
 
 ---
 
@@ -31,10 +51,12 @@ Everything else follows the stock skills unchanged.
    still in the future. A token that lapsed mid-week cost the 8/14/2026 run its entire Jira
    coverage. `AIRTABLE_API_KEY_EXPIRES` is optional and may be absent.
 2. **Config completeness.** `config.md` should carry `SLACK_URL`, `JIRA_SITE`, `JIRA_EMAIL`,
-   `JIRA_JQL`, `ONENOTE_URL`, `AIRTABLE_515_URL`, `AIRTABLE_GOALS_URL`, `OUTPUT_ROOT`. List the
-   keys with a grep for `^[A-Z_]* *=` — **don't** echo the values into the transcript.
-   `AZURE_DEVOPS_ORG_URL` is not yet set, so `azure-git-summary` is skipped — that's expected until
-   it's added, not a failure to flag.
+   `JIRA_JQL`, `AIRTABLE_515_URL`, `AIRTABLE_GOALS_URL`, `OUTPUT_ROOT`. List the keys with a grep
+   for `^[A-Z_]* *=` — **don't** echo the values into the transcript. `NOTES_LOCATION`/`NOTES_URL`
+   are deliberately unset — see "Where Robert's notes live" below instead. `AZURE_DEVOPS_ORG_URL`
+   is not yet set, so `azure-git-summary` is skipped — that's expected until it's added, not a
+   failure to flag. This whole check is just the generic "Source availability" step
+   (`shared/work-week.md` §2c) with Robert's own current state as the example.
 3. **Already-run collectors.** `ls <FRIDAY>/` first. Robert sometimes runs `goals-summary`
    mid-week, so the three Airtable artifacts may already exist for this Friday. **Ask** whether to
    reuse or refresh — don't assume either way.
@@ -46,73 +68,59 @@ Everything else follows the stock skills unchanged.
 Establish the week once (`shared/work-week.md` snippet → `FRIDAY`, `MONDAY`, `WEEK_START`,
 `WEEK_END`, `LABEL`) and announce it. All output lands in `<FRIDAY>/`.
 
-**Automated — run these four, from the workspace root so config discovery walks up correctly.**
-They're independent; a failure in one doesn't stop the others. The two scripts can run in the
-background in parallel while you do the stub and doc work.
+**Automated — run these three, from the workspace root so config discovery walks up correctly.**
+They're independent; a failure in one doesn't stop the others.
 
 | Skill | How | Writes |
 |---|---|---|
 | `jira-summary` | `python weekly-515-reporting/scripts/jira_fetch.py` | `jira-activity.json` → `jira-summary.md` |
 | `git-summary` | `python weekly-515-reporting/scripts/github_fetch.py` | `github-activity.json` → `git-summary.md` |
 | `azure-git-summary` *(only once `AZURE_DEVOPS_ORG_URL` is set — see preflight)* | `python weekly-515-reporting/scripts/azure_devops_fetch.py` | `azure-git-activity.json` → `azure-git-summary.md` |
-| `email-summary` | M365 MCP `outlook_email_search`, `WEEK_START`→`WEEK_END`; **second pass** with `folderName="Sent Items"`; `read_resource` on decision-bearing threads | `email-summary.md` |
-| `calendar-summary` | M365 MCP `outlook_calendar_search`, `order="oldest"`; `read_resource` per event for agenda/attendees/`meetingTranscriptUrl` | `calendar-summary.md` |
 
 `claude-summary` — run the Step 2 transcript scan from its SKILL.md (swap in this week's dates and
-`python`), then write the file with the two browser surfaces marked not-collected.
+`python`); this run is itself a Claude Code session, so the scan genuinely finds Robert's real
+history. Write the file with claude.ai and Cowork both marked not-collected (see the deviations
+table above for why).
+
+`email-summary` and `calendar-summary` — **paste-only here**, same as Slack and notes: this
+session has no M365 Connectors UI to call `outlook_email_search`/`outlook_calendar_search`
+directly (see the resolved note above). Ask Robert to run those from Cowork/Claude Desktop for the
+week and paste the results in; write their stubs the same way as the chat-summary/notes-summary
+templates.
 
 **Windows differ on purpose.** Jira is **Fri→Fri** (7 days, ending on the anchor Friday); GitHub,
 Azure DevOps, email, calendar and Claude Code are **Mon–Fri**. This is deliberate — Robert's Jira reporting
 period is Fri→Fri. If you ever change the anchor rule, change it in *both* `shared/work-week.md`
 and `scripts/jira_fetch.py` or the Jira window and the output folder drift apart.
 
-**Stubs — write both, then checkpoint.** Templates below.
+**Stubs — write all four, then checkpoint.** `chat-summary` and `notes-summary` each write their
+own `AWAITING INPUT` stub per their SKILL.md — no need to reproduce the templates here, they're the
+generic default now. For the notes prompt specifically, point Robert at his real OneNote structure
+rather than asking a generic "where do you keep notes" question — see below. `email-summary` and
+`calendar-summary` need an equivalent hand-written stub (same `Status: AWAITING INPUT` shape,
+noting the M365-connector-unavailable-from-this-session reason) since their own SKILL.md files
+don't define one yet — they assume the connector is always reachable.
 
 **Checkpoint.** Report what was collected, 2–3 sentences on the week, and an explicit list of what
-needs Robert. Then stop. The roll-up happens in a later turn, after he confirms the stubs are
-filled.
+needs Robert — now **four** pastes (Slack, notes, email, calendar), not two. Then stop. The
+roll-up happens in a later turn, after he confirms the stubs are filled. (The chat/notes half of
+this is `run-weekly-515`'s own Step 4 now, not a local deviation; email/calendar's paste need is
+Robert-specific, from running this via Claude Code — repeated here only because it's the step most
+likely to get skipped by accident.)
 
-**Roll-up (next turn).** Summarize the pasted OneNote raw notes into the file's proper sections
-first, then run `weekly-515-rollup` over everything in `<FRIDAY>/`.
+**Roll-up (next turn).** Summarize the pasted notes raw text, and the pasted email/calendar
+material, into each file's proper sections first, then run `weekly-515-rollup` over everything in
+`<FRIDAY>/`.
 
 ---
 
-## Stub templates
+## Where Robert's notes live (for the `notes-summary` paste prompt)
 
-Both must be *obviously* unpopulated, so a later roll-up can't mistake an empty stub for a quiet
-week. Fill in `<LABEL>`, the real dates, and `SLACK_URL` from config.
+`notes-summary` is tool-agnostic and just asks where personal notes live. For Robert, that's
+**OneNote**, with a structure specific enough to repeat here instead of making him explain it every
+week — use this to steer the paste request, and to navigate directly if Claude in Chrome is ever
+re-enabled:
 
-### `<FRIDAY>/chat-summary.md`
-
-```markdown
-# Chat summary — week of <LABEL>
-_Source: Slack via the **Weekly Activity Summary** skill — **awaiting manual paste** (Claude in Chrome is disabled at PBS,
-so the workspace can't be read directly). Teams is not a source. Generated <TODAY>._
-
-## Status: AWAITING INPUT — paste your Slack recap below
-
-Open <SLACK_URL> and run your saved **Weekly Activity Summary** skill, then paste the reply into the
-block below. **A raw paste is fine** — no cleanup needed; the roll-up reads Slack's own formatting.
-
-## Slack
-
-<!-- PASTE SLACKBOT RECAP HERE -->
-
-## Teams
-
-Not a source — Robert doesn't use Teams. Excluded by preference, **not** a gap in coverage.
-```
-
-### `<FRIDAY>/onenote-summary.md`
-
-```markdown
-# OneNote summary — week of <LABEL>
-_Source: journal notes **awaiting manual paste** (Claude in Chrome is disabled at PBS, so the
-notebook can't be read directly). Generated <TODAY>._
-
-## Status: AWAITING INPUT — paste your journal notes below
-
-Where to look:
 - **BI Tech Group → Journal 2026** — the main journal, start here.
 - **Projects Experiments** — per-person / per-project pages with dated entries.
 - Skip anything under **Archive**. **Never open the `Credentials` page.**
@@ -120,15 +128,11 @@ Where to look:
   each date **wrapped in double quotes** (`"<M/D/YY>"`), and run the search **per section** —
   OneNote search is scoped to one section at a time.
 
-## Raw notes as supplied
-
-(a fenced code block containing one `<M/D/YY>:` heading per working day, blank underneath)
-```
-
-On the next turn, summarize the pasted notes into **Accomplishments & progress / Decisions /
-Ideas & proposals / Open items & blockers**, and keep the raw text at the bottom under
-`## Raw notes as supplied`. That's the shape the 8/14/2026 file settled on and it worked well —
-the raw block is what makes the summary auditable.
+When Robert pastes, the raw text should come back shaped as one `<M/D/YY>:` heading per working day
+with his notes underneath. On the next turn, summarize it into **Accomplishments & progress /
+Decisions / Ideas & proposals / Open items & blockers**, and keep the raw text at the bottom under
+`## Raw notes as supplied`. That's the shape the 8/14/2026 file settled on and it worked well — the
+raw block is what makes the summary auditable.
 
 ---
 
@@ -153,14 +157,15 @@ From `weekly-515-rollup/SKILL.md`, repeated here because these are the ones that
 ## Verification
 
 1. `ls <FRIDAY>/` — expect `jira-summary.md` + `jira-activity.json`, `git-summary.md` +
-   `github-activity.json`, `email-summary.md`, `calendar-summary.md`, `claude-summary.md`, the two
-   stubs, and the three Airtable/goals artifacts (plus `azure-git-summary.md` +
-   `azure-git-activity.json` once `AZURE_DEVOPS_ORG_URL` is configured). Compare against the
-   previous week's folder.
+   `github-activity.json`, `claude-summary.md`, all **four** stubs (`chat-summary.md`,
+   `notes-summary.md`, `email-summary.md`, `calendar-summary.md`), and the three Airtable/goals
+   artifacts (plus `azure-git-summary.md` + `azure-git-activity.json` once `AZURE_DEVOPS_ORG_URL`
+   is configured). Compare against the previous week's folder.
 2. Confirm the window inside `jira-activity.json` is Fri→Fri and GitHub's (and Azure DevOps', once
    configured) is Mon–Fri.
 3. Every `*-summary.md` opens with `# … — week of <LABEL>` and an italic `_Source: …_` line.
-4. Both stubs still say `AWAITING INPUT`, and nothing in the folder claims missing Teams coverage.
+4. All four stubs still say `AWAITING INPUT`, and nothing in the folder claims missing Teams
+   coverage.
 5. After the roll-up: `proposed 515 accomplishments.md` mirrors the field structure in
    `<FRIDAY>/airtable-515-records.json` — Month and Year, Week Ending Date, User, numbered
    Accomplishment / Goals / Highlight blocks, Next Week's Priorities, Challenges and Opportunities,
@@ -171,6 +176,12 @@ From `weekly-515-rollup/SKILL.md`, repeated here because these are the ones that
 ## A note on scope
 
 This playbook records **Robert's** environment. A colleague running the plugin should start from
-[COLLEAGUE-SETUP.md](COLLEAGUE-SETUP.md) instead — the Teams removal and the Chrome-disabled
-workarounds here are local facts, not plugin design. Background on how the plugin got this way is
-in [PROJECT-NOTES.md](PROJECT-NOTES.md).
+[COLLEAGUE-SETUP.md](COLLEAGUE-SETUP.md) instead — the Teams removal, the named Slack skill,
+Robert's own OneNote structure, and running this specific instance from the **Claude Code VS Code
+extension rather than Cowork** (with the email/calendar paste-bridge that comes with it) are all
+local facts here, not plugin design. A colleague running from Cowork instead gets the Microsoft
+365 connector automatically but loses the Claude Code surface of `claude-summary` — see
+`COLLEAGUE-SETUP.md`'s note on that tradeoff. The Chrome-disabled manual-paste behavior and the
+"every source is optional" reporting, by contrast, **are** plugin design now (as of v0.13.0) — they
+apply to every colleague at PBS and are documented in the SKILL.md files themselves, not just here.
+Background on how the plugin got this way is in [PROJECT-NOTES.md](PROJECT-NOTES.md).

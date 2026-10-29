@@ -4,9 +4,10 @@ description: >
   Summarize the user's recent Jira updates for the most recent Friday-to-Friday span (aligned to
   the weekly folder) and save it as jira-summary.md in the weekly 515 folder. Pulls issues,
   comments, and field-change history from the Atlassian Jira Cloud REST API with the user's own API
-  token — no browser and no Jira/Atlassian connector required. Use whenever the user wants their
-  weekly Jira activity captured for their 515 report, asks "summarize my Jira this week", "what
-  tickets did I move", or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
+  token — no browser and no Jira/Atlassian connector required. Optional — skipped automatically if
+  `JIRA_SITE`/`JIRA_EMAIL` aren't configured. Use whenever the user wants their weekly Jira activity
+  captured for their 515 report, asks "summarize my Jira this week", "what tickets did I move", or
+  runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
 ---
 
 # Jira summary (Atlassian REST API)

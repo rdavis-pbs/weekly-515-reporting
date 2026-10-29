@@ -3,8 +3,8 @@ name: weekly-515-rollup
 description: >
   Build the proposed weekly 515 entry: read the user's last few 515 records and their table's field
   structure, plus their committed and upcoming FY goals/tasks, from the Airtable REST API with the
-  user's own token, then distill this week's collected summaries (chat, email, calendar, OneNote,
-  GitHub and Azure DevOps git activity, Jira, Claude) into that same Airtable format, saving it as
+  user's own token, then distill this week's collected summaries (chat, email, calendar, personal
+  notes, GitHub and Azure DevOps git activity, Jira, Claude) into that same Airtable format, saving it as
   "proposed 515 accomplishments.md" in the
   weekly 515 folder and notifying the user. Use whenever the user wants to draft/prepare their 515
   entry, asks to "roll up my week", "draft my 515", "prepare my weekly Airtable update", "what's due
@@ -149,11 +149,19 @@ draft's header note that the format could not be confirmed live.
 ## Step 3 — Read this week's collected summaries
 
 Read every file present in the `<FRIDAY>` folder:
-`chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `onenote-summary.md`,
+`chat-summary.md`, `email-summary.md`, `calendar-summary.md`, `notes-summary.md`,
 `git-summary.md`, `azure-git-summary.md`, `jira-summary.md`, `claude-summary.md`, `goals-summary.md`.
-Some may be missing if a source had no activity or wasn't run — that's fine; work with what's there
-and note which sources were unavailable. `azure-git-summary.md` in particular is expected to be
-absent for users who don't use Azure DevOps — that's a config choice, not a gap.
+Some may be missing if a source isn't configured, had no activity, or wasn't run — that's fine; work
+with what's there and note which sources were unavailable. Every collector is optional, not just
+Azure DevOps — a missing file for a source the user doesn't use (no Jira, no Azure DevOps, no
+separate personal-notes habit, whatever) is a config choice, not a gap.
+
+**Before drafting from `chat-summary.md` or `notes-summary.md`, check for `Status: AWAITING
+INPUT`.** That marks a stub still waiting on a manual paste (the default path while Claude in
+Chrome is disabled org-wide at PBS) — treat it as **not yet available**, not as empty content, and
+do not synthesize from the placeholder text. If you find one, stop and tell the user rather than
+drafting the roll-up around it; don't run this skill in the same turn as the collectors until both
+stubs are filled.
 
 The goals items from Step 2b often carry a `JIRA` URL — use it to tie a committed item to the ticket
 activity in `jira-summary.md`, which is the strongest available evidence that the item actually moved

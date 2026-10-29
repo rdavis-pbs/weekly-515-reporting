@@ -23,24 +23,32 @@ on the folder.
 
 ## Skills
 
+Every source below is **optional** — nobody has to set up all of them. Different people rely on
+different tools, so each collector is skipped automatically (no error, no reported gap) if its
+config key isn't set. `run-weekly-515` reports which sources are configured and which are available
+but not set up at the start of every run, so you always know what's running and what you could add.
+
 | Skill | Source | How it connects | Output file |
 |-------|--------|-----------------|-------------|
-| `chat-summary` | Slack | Slack via Slackbot summary (browser) | `chat-summary.md` |
-| `email-summary` | Outlook mail | Microsoft 365 connector | `email-summary.md` |
-| `calendar-summary` | Outlook calendar | Microsoft 365 connector | `calendar-summary.md` |
-| `onenote-summary` | OneNote notes | SharePoint-hosted notebook via browser (Claude in Chrome) | `onenote-summary.md` |
-| `git-summary` | GitHub | **GitHub REST API** via your own token (`scripts/github_fetch.py`) | `git-summary.md` |
-| `azure-git-summary` | Azure DevOps (Azure Repos) | **Azure DevOps REST API** via your own PAT (`scripts/azure_devops_fetch.py`) | `azure-git-summary.md` |
-| `jira-summary` | Jira | **Atlassian REST API** via your own API token (`scripts/jira_fetch.py`) | `jira-summary.md` |
-| `claude-summary` | Claude Code + claude.ai chat + Cowork | Local transcripts on disk; chat via browser; Cowork via desktop app | `claude-summary.md` |
-| `goals-summary` | Airtable resource tracker (FY goals/tasks) | **Airtable REST API** via your own token (`scripts/airtable_fetch.py --source goals`) | `goals-summary.md` |
-| `weekly-515-rollup` | all of the above + your 515 records | **Airtable REST API** via your own token (`scripts/airtable_fetch.py`) | `proposed 515 accomplishments.md` |
+| `chat-summary` | Slack *(optional)* | Slack via your saved recap skill, read by manual paste | `chat-summary.md` |
+| `email-summary` | Outlook mail *(optional)* | Microsoft 365 connector | `email-summary.md` |
+| `calendar-summary` | Outlook calendar *(optional)* | Microsoft 365 connector | `calendar-summary.md` |
+| `notes-summary` | Personal notes *(optional, any tool)* | Notepad, OneNote, Word, a notebook, whatever — read by manual paste | `notes-summary.md` |
+| `git-summary` | GitHub *(optional)* | **GitHub REST API** via your own token (`scripts/github_fetch.py`) | `git-summary.md` |
+| `azure-git-summary` | Azure DevOps (Azure Repos) *(optional)* | **Azure DevOps REST API** via your own PAT (`scripts/azure_devops_fetch.py`) | `azure-git-summary.md` |
+| `jira-summary` | Jira *(optional)* | **Atlassian REST API** via your own API token (`scripts/jira_fetch.py`) | `jira-summary.md` |
+| `claude-summary` | Claude Code + claude.ai chat + Cowork | Local transcripts on disk; Cowork via desktop app; chat via browser if available | `claude-summary.md` |
+| `goals-summary` | Airtable resource tracker (FY goals/tasks) *(optional)* | **Airtable REST API** via your own token (`scripts/airtable_fetch.py --source goals`) | `goals-summary.md` |
+| `weekly-515-rollup` | all of the above + your 515 records **(required)** | **Airtable REST API** via your own token (`scripts/airtable_fetch.py`) | `proposed 515 accomplishments.md` |
 | `run-weekly-515` | — | orchestrates all of the above | — |
 
 Trigger `run-weekly-515` each Friday to do the whole thing, or run any single skill on its own.
+`chat-summary` and `notes-summary` default to a manual-paste stub rather than reading their source
+directly, since Claude in Chrome is disabled org-wide at PBS — `run-weekly-515` pauses for those
+pastes before rolling up.
 
-If your environment differs from the stock assumptions above — a source you don't use, a browser
-that's locked down, a step you want to pause on — record that once in
+If your environment differs further from the stock assumptions above — a step you want to pause
+on, a saved Slack recap skill with a different name — record that once in
 `docs/WEEKLY-RUN-PLAYBOOK.md` and `run-weekly-515` will read it before every run. See
 [docs/WEEKLY-RUN-PLAYBOOK.md](docs/WEEKLY-RUN-PLAYBOOK.md) for the maintainer's own, as an example.
 
@@ -53,16 +61,25 @@ config survives plugin auto-updates (the installed plugin folder is a cache repl
 **and** it survives Cowork sessions (the sandbox home directory is wiped each session). Easiest path:
 just run any skill and let first-run setup create it for you.
 
-- `SLACK_URL` — your Slack workspace/channel URL (used by `chat-summary`).
-- `JIRA_SITE` / `JIRA_EMAIL` — your Atlassian host and account email (used by `jira-summary`).
+Every key below is **optional** except `AIRTABLE_515_URL` — set only the ones for sources you
+actually use; leaving the rest out just skips that collector.
+
+- `SLACK_URL` — *optional.* Your Slack workspace/channel URL (used by `chat-summary`). Omit it
+  entirely if you don't use Slack.
+- `JIRA_SITE` / `JIRA_EMAIL` — *optional.* Your Atlassian host and account email (used by
+  `jira-summary`). Omit both if you don't use Jira.
 - `JIRA_JQL` — *optional.* Custom JQL with `{start}`/`{end}` placeholders; defaults to "issues you
   updated in the window."
-- `ONENOTE_URL` — your SharePoint/OneDrive OneNote notebook URL (used by `onenote-summary`).
-- `AIRTABLE_515_URL` — your 515 base/view URL (used by `weekly-515-rollup`).
+- `NOTES_LOCATION` / `NOTES_URL` — *optional.* Used by `notes-summary`, which is tool-agnostic
+  (OneNote, Notepad, Word, a notebook, whatever). Omit both and it just asks you directly each run.
+- `AIRTABLE_515_URL` — **required.** Your 515 base/view URL (used by `weekly-515-rollup`) — the one
+  source that isn't optional, since there's no 515 format to draft into without it.
 - `GITHUB_USER` / `GITHUB_HOST` — *optional.* Defaults to the token's own account on github.com; set
-  `GITHUB_HOST` only for GitHub Enterprise Server.
-- `AZURE_DEVOPS_ORG_URL` — your Azure DevOps organization URL (used by `azure-git-summary`). Leave
-  the plugin's whole Azure DevOps setup out if you don't use it — that collector is simply skipped.
+  `GITHUB_HOST` only for GitHub Enterprise Server. `git-summary` itself is skipped if `GITHUB_TOKEN`
+  isn't set in `credentials.md`.
+- `AZURE_DEVOPS_ORG_URL` — *optional.* Your Azure DevOps organization URL (used by
+  `azure-git-summary`). Leave the plugin's whole Azure DevOps setup out if you don't use it — that
+  collector is simply skipped.
 - `AZURE_DEVOPS_PROJECT` / `AZURE_DEVOPS_EMAIL` — *optional.* Scope the scan to specific projects, or
   override the account email used to match commit authorship.
 - `OUTPUT_ROOT` — *optional.* Reports default to the connected folder; set this only to write them elsewhere.
@@ -78,20 +95,41 @@ just run any skill and let first-run setup create it for you.
 
 ## Connectors used
 
-- **Microsoft 365** (Outlook mail, calendar) — used directly.
+- **Microsoft 365** (Outlook mail, calendar) — used directly. Optional in the sense that
+  `email-summary`/`calendar-summary` are skipped if the connector isn't authorized. The connector
+  shows up in Cowork and Claude Desktop; the **VS Code/JetBrains Claude Code extensions have no
+  Connectors UI**, so running the plugin from one of those means pasting email/calendar in
+  manually instead (see the Claude Code bullet below for why you might choose that trade-off).
 - **Airtable** — the **Airtable REST API** with your own personal access token, via
-  `scripts/airtable_fetch.py`. Two sources: your 515 records (`AIRTABLE_515_URL`, for the format) and
-  optionally your FY goals/tasks (`AIRTABLE_GOALS_URL`, for Next Week's Priorities). Read-only; the
-  Airtable connector and the browser remain as fallbacks for the 515 read.
-- **Jira** — the **Atlassian REST API** with your own API token, via `scripts/jira_fetch.py`.
-- **GitHub** — the **GitHub REST API** with your own token, via `scripts/github_fetch.py`.
-- **Azure DevOps** — the **Azure DevOps REST API** with your own personal access token, via
-  `scripts/azure_devops_fetch.py`. Optional: skipped entirely if `AZURE_DEVOPS_ORG_URL` isn't set.
+  `scripts/airtable_fetch.py`. Two sources: your 515 records (`AIRTABLE_515_URL`, **required** —
+  the format) and optionally your FY goals/tasks (`AIRTABLE_GOALS_URL`, for Next Week's
+  Priorities). Read-only; the Airtable connector and the browser remain as fallbacks for the 515
+  read (the browser one unavailable where Claude in Chrome is disabled by policy).
+- **Jira** *(optional)* — the **Atlassian REST API** with your own API token, via
+  `scripts/jira_fetch.py`. Skipped if `JIRA_SITE`/`JIRA_EMAIL` aren't set.
+- **GitHub** *(optional)* — the **GitHub REST API** with your own token, via
+  `scripts/github_fetch.py`. Skipped if `GITHUB_TOKEN` isn't set.
+- **Azure DevOps** *(optional)* — the **Azure DevOps REST API** with your own personal access
+  token, via `scripts/azure_devops_fetch.py`. Skipped entirely if `AZURE_DEVOPS_ORG_URL` isn't set.
   All fetch scripts are stdlib-only Python with no dependencies, and need no browser or connector.
-- **Slack**, **OneNote**, **claude.ai chat** — accessed through the browser (Claude in Chrome), so no
-  connector auth is required; just be signed in to each in Chrome. If your organization has disabled
-  the extension, these collectors can't run — paste the material in yourself, or skip them; the
-  roll-up uses whatever files exist.
+- **Slack** *(optional)*, **personal notes** *(optional, any tool)* — read by **manual paste** by
+  default: `chat-summary` and `notes-summary` write an `AWAITING INPUT` stub and the run pauses
+  until you paste, since Claude in Chrome is disabled org-wide at PBS. Both fall back to reading
+  their source directly through the browser instead, if that extension is ever available again.
+  Skipped (not stubbed) if you don't use Slack, or don't keep separate notes.
+- **claude.ai chat** — read through the browser (Claude in Chrome) when available; marked
+  **not-collected** (not "no activity" — a different claim) while the extension is disabled.
 - **Cowork** — read from the Claude desktop app (desktop-only; no web URL), by `claude-summary`.
 - **Claude Code** — read from local session transcripts under `~/.claude/projects/`; nothing to
-  authorize, but the sessions must live on the machine the plugin runs on.
+  authorize, but **the plugin itself must be running from a genuine Claude Code session** (CLI,
+  VS Code/JetBrains extension, or the desktop app's own Code surface) to reach them — running from
+  **Cowork** instead resolves `~/.claude/projects/` to Cowork's own sandboxed, ephemeral home
+  directory, not your real machine's, so that surface comes back empty and gets marked
+  not-collected rather than "no activity." Trade-off: the VS Code/JetBrains extensions have no
+  Microsoft 365 Connectors UI (see above), so picking Code over Cowork to get Claude Code history
+  usually means losing the automatic email/calendar read in exchange. Whether the desktop app's own
+  Code surface keeps both isn't confirmed yet.
+
+`run-weekly-515` reports, at the start of every run, which of the optional sources above are
+currently configured and which are available but not set up — so you always know what's included
+this week without having to remember your own config.

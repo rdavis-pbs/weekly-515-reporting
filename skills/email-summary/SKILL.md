@@ -2,9 +2,10 @@
 name: email-summary
 description: >
   Summarize the user's sent and received Outlook email for the current work week (Mon–Fri) and
-  save it as email-summary.md in the weekly 515 folder. Use whenever the user wants their weekly
-  email activity captured for their 515 report, asks to "summarize my emails this week", "what did
-  I send/receive", or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
+  save it as email-summary.md in the weekly 515 folder. Optional — skipped automatically if the
+  Microsoft 365 connector isn't authorized. Use whenever the user wants their weekly email activity
+  captured for their 515 report, asks to "summarize my emails this week", "what did I send/receive",
+  or runs the weekly 515 workflow. Part of the weekly-515-reporting plugin.
 ---
 
 # Email summary (Outlook)
